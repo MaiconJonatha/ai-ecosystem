@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+.venv/
+
+# Database
+# *.db  # instagram.db needs to be in repo for Render
+*.db-journal
+*.db-wal
+
+# JSON data (regenerated)
+instagram_data.json
+
+# Environment
+.env
+.env.local
+
+# Large generated static files
+static/ig_images/pexels_*
+static/ig_images/flux_*
+static/ig_images/sf_*
+static/ig_images/gemini_*
+static/ig_images/inet_*
+static/ig_images/pixabay_*
+static/ig_images/lucid-origin_*
+static/ig_images/llama_*
+static/gallery/
+static/hf_videos/
+static/tiktok_videos/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Robot videos (generated)
+static/ig_images/*.mp4
+static/ig_videos/
+# TikTok generated content
+static/tiktok_thumbs/
+CHAVES.txt
+__pycache__/
+*.db-shm
+*.db-wal

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shopee Video - Automatizador</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; }
+        
+        .header {
+            background: linear-gradient(135deg, #ee4d2d, #ff6f00);
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 2px 10px rgba(238,77,45,0.3);
+        }
+        .header h1 { font-size: 22px; color: white; display: flex; align-items: center; gap: 8px; }
+        .header .logo { font-size: 28px; }
+        
+        .stats-bar {
+            background: #16213e;
+            padding: 10px 20px;
+            display: flex; gap: 20px; justify-content: center;
+            border-bottom: 1px solid #1a3a5c;
+        }
+        .stat { text-align: center; }
+        .stat-num { font-size: 24px; font-weight: bold; color: #ee4d2d; }
+        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; }
+        
+        .controls {
+            padding: 15px 20px;
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+            background: #0f3460;
+        }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: bold; font-size: 14px; transition: all 0.2s;
+        }
+        .btn-primary { background: #ee4d2d; color: white; }
+        .btn-primary:hover { background: #ff6f00; transform: scale(1.05); }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #2ecc71; }
+        .btn-danger { background: #c0392b; color: white; }
+        .btn-danger:hover { background: #e74c3c; }
+        .btn-secondary { background: #34495e; color: white; }
+        .btn-secondary:hover { background: #4a6a8a; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-auto-on { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(39,174,96,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(39,174,96,0); }
+        }
+        
+        .categoria-select {
+            padding: 15px 20px;
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+        }
+        .cat-chip {
+            padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            background: #16213e; border: 1px solid #1a3a5c; font-size: 13px;
+            transition: all 0.2s;
+        }
+        .cat-chip:hover, .cat-chip.active { background: #ee4d2d; border-color: #ee4d2d; color: white; }
+        
+        .content { padding: 15px 20px; max-width: 1400px; margin: 0 auto; }
+        
+        .generating {
+            text-align: center; padding: 40px;
+            display: none;
+        }
+        .generating.active { display: block; }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid #333;
+            border-top: 4px solid #ee4d2d; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .video-card {
+            background: #16213e;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #1a3a5c;
+            transition: transform 0.2s;
+        }
+        .video-card:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        
+        .video-preview {
+            position: relative;
+            aspect-ratio: 9/16;
+            max-height: 400px;
+            background: #0a0a1a;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .video-preview video {
+            width: 100%; height: 100%; object-fit: contain;
+        }
+        .video-preview .play-overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3); cursor: pointer;
+            font-size: 50px; opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .video-preview .play-overlay:hover { opacity: 1; }
+        
+        .video-info { padding: 12px; }
+        .video-info h3 { font-size: 15px; margin-bottom: 5px; color: #fff; }
+        .video-info .produto { color: #ee4d2d; font-size: 13px; margin-bottom: 5px; }
+        .video-info .meta { font-size: 11px; color: #888; display: flex; justify-content: space-between; }
+        .video-info .hashtags { font-size: 11px; color: #5dade2; margin-top: 5px; }
+        .video-info .beneficios { font-size: 12px; color: #aaa; margin: 5px 0; }
+        .video-info .beneficios span { display: block; }
+        .video-info .preco { font-size: 18px; font-weight: bold; color: #ee4d2d; margin: 8px 0; }
+        
+        .video-actions {
+            padding: 8px 12px; display: flex; gap: 8px;
+            border-top: 1px solid #1a3a5c;
+        }
+        .video-actions .btn { flex: 1; padding: 8px; font-size: 12px; }
+        
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #666;
+        }
+        .empty-state .icon { font-size: 60px; margin-bottom: 15px; }
+        .empty-state p { font-size: 16px; }
+        
+        .log-panel {
+            margin-top: 20px; background: #0d1b2a; border-radius: 8px;
+            padding: 15px; max-height: 200px; overflow-y: auto;
+            font-family: monospace; font-size: 12px; color: #4ade80;
+            display: none;
+        }
+        .log-panel.active { display: block; }
+        .log-line { padding: 2px 0; border-bottom: 1px solid #1a2a3a; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="logo">🛍️</span> AI Shopee Video</h1>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <span id="autoStatus" style="font-size:12px;color:#aaa;">Parado</span>
+        </div>
+    </div>
+    
+    <div class="stats-bar">
+        <div class="stat">
+            <div class="stat-num" id="totalVideos">0</div>
+            <div class="stat-label">Videos Gerados</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num" id="totalCategorias">6</div>
+            <div class="stat-label">Categorias</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num" id="totalProdutos">0</div>
+            <div class="stat-label">Produtos</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn btn-primary" id="btnGerar" onclick="gerarVideo()">
+            🎬 Gerar 1 Video
+        </button>
+        <button class="btn btn-success" id="btnAuto" onclick="toggleAuto()">
+            🔄 Auto Mode ON
+        </button>
+        <button class="btn btn-secondary" onclick="toggleLog()">
+            📋 Logs
+        </button>
+    </div>
+    
+    <div class="categoria-select" id="categorias"></div>
+    
+    <div class="generating" id="generating">
+        <div class="spinner"></div>
+        <p>Gerando video com IA...</p>
+        <p style="font-size:12px;color:#888;margin-top:5px;">Criando roteiro + imagem + video</p>
+    </div>
+    
+    <div class="content">
+        <div class="video-grid" id="videoGrid"></div>
+        <div class="empty-state" id="emptyState">
+            <div class="icon">🎬</div>
+            <p>Nenhum video gerado ainda</p>
+            <p style="font-size:13px;color:#555;margin-top:8px;">Clique em "Gerar Video" ou ative o Auto Mode</p>
+        </div>
+    </div>
+    
+    <div class="log-panel" id="logPanel"></div>
+
+    <script>
+        let selectedCategoria = null;
+        let autoRunning = false;
+        
+        function addLog(msg) {
+            var panel = document.getElementById('logPanel');
+            var line = document.createElement('div');
+            line.className = 'log-line';
+            var now = new Date().toLocaleTimeString();
+            line.textContent = '[' + now + '] ' + msg;
+            panel.insertBefore(line, panel.firstChild);
+            if (panel.children.length > 50) panel.removeChild(panel.lastChild);
+        }
+        
+        function toggleLog() {
+            document.getElementById('logPanel').classList.toggle('active');
+        }
+        
+        async function loadCategorias() {
+            try {
+                var resp = await fetch('/api/categorias');
+                var data = await resp.json();
+                var html = '<span class="cat-chip active" onclick="selectCat(null, this)">Todas</span>';
+                data.categorias.forEach(function(c) {
+                    html += '<span class="cat-chip" onclick="selectCat(\'' + c.id + '\', this)">' + c.nome + ' (' + c.produtos + ')</span>';
+                });
+                document.getElementById('categorias').innerHTML = html;
+            } catch(e) { addLog('Erro: ' + e); }
+        }
+        
+        function selectCat(cat, el) {
+            selectedCategoria = cat;
+            document.querySelectorAll('.cat-chip').forEach(function(c) { c.classList.remove('active'); });
+            if (el) el.classList.add('active');
+        }
+        
+        async function gerarVideo() {
+            var btn = document.getElementById('btnGerar');
+            btn.disabled = true;
+            btn.textContent = '⏳ Gerando...';
+            document.getElementById('generating').classList.add('active');
+            addLog('Iniciando geracao de video...');
+            
+            try {
+                var body = {};
+                if (selectedCategoria) body.categoria = selectedCategoria;
+                
+                var resp = await fetch('/api/gerar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                var data = await resp.json();
+                
+                if (data.success) {
+                    addLog('Video gerado: ' + data.produto + ' (' + data.elapsed_seconds + 's)');
+                    loadVideos();
+                } else {
+                    addLog('Erro ao gerar video: ' + data.produto);
+                }
+            } catch(e) {
+                addLog('Erro: ' + e);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '🎬 Gerar 1 Video';
+            document.getElementById('generating').classList.remove('active');
+        }
+        
+        async function toggleAuto() {
+            var btn = document.getElementById('btnAuto');
+            if (!autoRunning) {
+                await fetch('/api/auto/start', {method: 'POST'});
+                autoRunning = true;
+                btn.textContent = '⏹️ Auto Mode OFF';
+                btn.className = 'btn btn-danger btn-auto-on';
+                document.getElementById('autoStatus').textContent = '🟢 Auto Mode ATIVO';
+                document.getElementById('autoStatus').style.color = '#27ae60';
+                addLog('Auto mode ATIVADO!');
+            } else {
+                await fetch('/api/auto/stop', {method: 'POST'});
+                autoRunning = false;
+                btn.textContent = '🔄 Auto Mode ON';
+                btn.className = 'btn btn-success';
+                document.getElementById('autoStatus').textContent = 'Parado';
+                document.getElementById('autoStatus').style.color = '#aaa';
+                addLog('Auto mode DESATIVADO');
+            }
+        }
+        
+        async function loadVideos() {
+            try {
+                var resp = await fetch('/api/videos');
+                var data = await resp.json();
+                var videos = data.videos || [];
+                
+                document.getElementById('totalVideos').textContent = videos.length;
+                document.getElementById('emptyState').style.display = videos.length ? 'none' : 'block';
+                
+                var html = '';
+                videos.forEach(function(v) {
+                    var script = v.script || {};
+                    var benefHtml = '';
+                    (script.beneficios || []).forEach(function(b) {
+                        benefHtml += '<span>✅ ' + b + '</span>';
+                    });
+                    
+                    html += '<div class="video-card">';
+                    if (v.video_url) {
+                        html += '<div class="video-preview">';
+                        html += '<video src="' + v.video_url + '" preload="metadata" loop muted playsinline onclick="this.paused ? this.play() : this.pause()"></video>';
+                        html += '</div>';
+                    }
+                    html += '<div class="video-info">';
+                    html += '<h3>' + (script.titulo || v.produto || '?') + '</h3>';
+                    html += '<div class="produto">📦 ' + (v.produto || '') + ' | ' + (v.categoria_nome || '') + '</div>';
+                    html += '<div class="beneficios">' + benefHtml + '</div>';
+                    html += '<div class="preco">' + (script.preco_sugerido || '') + '</div>';
+                    html += '<div class="hashtags">' + (v.hashtags || '') + '</div>';
+                    html += '<div class="meta"><span>⏱️ ' + (v.elapsed_seconds || 0) + 's</span><span>' + (v.created_at || '').split('T')[1].split('.')[0] + '</span></div>';
+                    html += '</div>';
+                    html += '<div class="video-actions">';
+                    if (v.video_url) {
+                        html += '<a class="btn btn-primary" href="' + v.video_url + '" download style="text-decoration:none;text-align:center;">⬇️ Download</a>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                });
+                
+                document.getElementById('videoGrid').innerHTML = html;
+            } catch(e) { addLog('Erro ao carregar videos: ' + e); }
+        }
+        
+        async function loadStatus() {
+            try {
+                var resp = await fetch('/api/status');
+                var data = await resp.json();
+                document.getElementById('totalVideos').textContent = data.videos_count;
+                document.getElementById('totalCategorias').textContent = data.categorias;
+                document.getElementById('totalProdutos').textContent = data.produtos_total;
+                if (data.running && !autoRunning) {
+                    autoRunning = true;
+                    document.getElementById('btnAuto').textContent = '⏹️ Auto Mode OFF';
+                    document.getElementById('btnAuto').className = 'btn btn-danger btn-auto-on';
+                    document.getElementById('autoStatus').textContent = '🟢 Auto Mode ATIVO';
+                    document.getElementById('autoStatus').style.color = '#27ae60';
+                }
+            } catch(e) {}
+        }
+        
+        // Init
+        loadCategorias();
+        loadStatus();
+        loadVideos();
+        setInterval(loadVideos, 15000);
+        setInterval(loadStatus, 10000);
+    </script>
+</body>
+</html>

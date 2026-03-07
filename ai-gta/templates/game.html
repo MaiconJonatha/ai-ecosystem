@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI GTA San Andreas - Mundo Aberto das IAs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header estilo GTA */
+        .header {
+            background: linear-gradient(180deg, #ff6600 0%, #cc3300 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #000;
+            box-shadow: 0 4px 20px rgba(255,102,0,0.5);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            text-shadow: 3px 3px 0 #000;
+            letter-spacing: 2px;
+        }
+
+        .header .info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .header .tempo {
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+
+        /* Container principal */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            height: calc(100vh - 70px);
+        }
+
+        /* Mapa */
+        .mapa-container {
+            position: relative;
+            background: linear-gradient(180deg, #2d5016 0%, #1a3009 100%);
+            overflow: hidden;
+        }
+
+        .mapa {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Locais no mapa */
+        .local {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .local:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .local .emoji {
+            font-size: 32px;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .local .nome {
+            font-size: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+
+        /* Personagens no mapa */
+        .personagem-mapa {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+
+        .personagem-mapa .avatar {
+            font-size: 28px;
+            animation: pulse 2s infinite;
+        }
+
+        .personagem-mapa .nome-tag {
+            font-size: 9px;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+            white-space: nowrap;
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .personagem-mapa.grove .nome-tag { border: 1px solid #00ff00; }
+        .personagem-mapa.ballas .nome-tag { border: 1px solid #9900ff; }
+        .personagem-mapa.vagos .nome-tag { border: 1px solid #ffff00; }
+        .personagem-mapa.aztecas .nome-tag { border: 1px solid #0099ff; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            border-left: 3px solid #ff6600;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-section h3 {
+            color: #ff6600;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        /* Personagens */
+        .personagem-card {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #222;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #333;
+        }
+
+        .personagem-card.grove { border-left-color: #00ff00; }
+        .personagem-card.ballas { border-left-color: #9900ff; }
+        .personagem-card.vagos { border-left-color: #ffff00; }
+        .personagem-card.aztecas { border-left-color: #0099ff; }
+
+        .personagem-card .avatar {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .personagem-card .info {
+            flex: 1;
+        }
+
+        .personagem-card .nome {
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .personagem-card .stats {
+            font-size: 10px;
+            color: #888;
+        }
+
+        .personagem-card .dinheiro {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* Stats bars */
+        .stat-bar {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 3px;
+            overflow: hidden;
+        }
+
+        .stat-bar .fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .stat-bar .fill.saude { background: #ff3333; }
+        .stat-bar .fill.respeito { background: #ff6600; }
+
+        /* Log de ações */
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .log-entry {
+            padding: 8px 10px;
+            background: #1a1a1a;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            font-size: 11px;
+            border-left: 3px solid #ff6600;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry .time {
+            color: #666;
+            font-size: 9px;
+        }
+
+        .log-entry .action {
+            color: #fff;
+        }
+
+        .log-entry .detail {
+            color: #ff6600;
+        }
+
+        /* Evento especial */
+        .evento-guerra {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #ff0000, #ff6600);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            animation: shake 0.5s infinite;
+            z-index: 100;
+            display: none;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%) rotate(-1deg); }
+            50% { transform: translateX(-50%) rotate(1deg); }
+        }
+
+        /* Ruas no mapa */
+        .rua {
+            position: absolute;
+            background: #444;
+            z-index: 1;
+        }
+
+        .rua.horizontal {
+            height: 8px;
+            width: 100%;
+        }
+
+        .rua.vertical {
+            width: 8px;
+            height: 100%;
+        }
+
+        /* Mini radar */
+        .radar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 50%;
+            border: 3px solid #ff6600;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #ff6600; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 AI GTA SAN ANDREAS</h1>
+        <div class="info">
+            <div class="tempo">
+                <span id="hora">12</span>:00 | Dia <span id="dia">1</span>
+            </div>
+            <div class="tempo">
+                <span id="clima">☀️ Ensolarado</span>
+            </div>
+            <div class="tempo" id="connectionStatus">Conectando...</div>
+        </div>
+    </div>
+
+    <div class="evento-guerra" id="eventoGuerra">
+        💥 GUERRA DE GANGUES! 💥
+    </div>
+
+    <div class="container">
+        <div class="mapa-container">
+            <div class="mapa" id="mapa">
+                <!-- Ruas -->
+                <div class="rua horizontal" style="top: 200px;"></div>
+                <div class="rua horizontal" style="top: 350px;"></div>
+                <div class="rua vertical" style="left: 250px;"></div>
+                <div class="rua vertical" style="left: 400px;"></div>
+
+                <!-- Locais serão adicionados via JS -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <h3>👥 Personagens</h3>
+                <div id="personagens"></div>
+            </div>
+
+            <div class="sidebar-section" style="flex: 1; display: flex; flex-direction: column;">
+                <h3>📋 Log de Ações</h3>
+                <div class="log-container" id="logs"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let personagens = {};
+        let locais = {};
+
+        // Locais do mapa
+        const locaisData = {
+            "grove_street": {nome: "Grove Street", x: 15, y: 80, emoji: "🏠"},
+            "los_santos_gym": {nome: "Gym", x: 25, y: 70, emoji: "💪"},
+            "cluckin_bell": {nome: "Cluckin' Bell", x: 35, y: 60, emoji: "🍗"},
+            "ammu_nation": {nome: "Ammu-Nation", x: 50, y: 50, emoji: "🔫"},
+            "binco": {nome: "Binco", x: 60, y: 40, emoji: "👕"},
+            "los_santos_customs": {nome: "LS Customs", x: 70, y: 30, emoji: "🔧"},
+            "vinewood": {nome: "Vinewood", x: 85, y: 20, emoji: "🎬"},
+            "praia": {nome: "Santa Maria Beach", x: 10, y: 40, emoji: "🏖️"},
+            "cassino": {nome: "Casino", x: 75, y: 60, emoji: "🎰"},
+            "banco": {nome: "Bank", x: 45, y: 30, emoji: "🏦"},
+            "hospital": {nome: "Hospital", x: 55, y: 80, emoji: "🏥"},
+            "delegacia": {nome: "LSPD", x: 60, y: 70, emoji: "👮"},
+        };
+
+        function conectar() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/game`);
+
+            ws.onopen = () => {
+                document.getElementById('connectionStatus').textContent = '🟢 Online';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'inicial' || data.type === 'estado') {
+                    personagens = data.personagens;
+                    atualizarPersonagens();
+                    atualizarMapa();
+                    if (data.hora !== undefined) {
+                        document.getElementById('hora').textContent = data.hora.toString().padStart(2, '0');
+                    }
+                    if (data.clima) {
+                        atualizarClima(data.clima);
+                    }
+                } else if (data.type === 'acao') {
+                    adicionarLog(data);
+                } else if (data.type === 'tempo') {
+                    document.getElementById('hora').textContent = data.hora.toString().padStart(2, '0');
+                    document.getElementById('dia').textContent = data.dia;
+                    atualizarClima(data.clima);
+                } else if (data.type === 'evento' && data.evento === 'guerra_gangues') {
+                    mostrarGuerra(data.mensagem);
+                }
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionStatus').textContent = '🔴 Offline';
+                setTimeout(conectar, 3000);
+            };
+        }
+
+        function inicializarMapa() {
+            const mapa = document.getElementById('mapa');
+
+            for (const [id, local] of Object.entries(locaisData)) {
+                const div = document.createElement('div');
+                div.className = 'local';
+                div.style.left = local.x + '%';
+                div.style.top = local.y + '%';
+                div.innerHTML = `
+                    <div class="emoji">${local.emoji}</div>
+                    <div class="nome">${local.nome}</div>
+                `;
+                mapa.appendChild(div);
+            }
+        }
+
+        function atualizarMapa() {
+            // Remover personagens antigos
+            document.querySelectorAll('.personagem-mapa').forEach(el => el.remove());
+
+            const mapa = document.getElementById('mapa');
+
+            for (const [emoji, data] of Object.entries(personagens)) {
+                const div = document.createElement('div');
+                div.className = `personagem-mapa ${data.gangue}`;
+
+                // Converter posição para porcentagem
+                const x = (data.posicao.x / 600) * 100;
+                const y = (data.posicao.y / 500) * 100;
+
+                div.style.left = x + '%';
+                div.style.top = y + '%';
+                div.innerHTML = `
+                    <div class="nome-tag">${data.nome}</div>
+                    <div class="avatar">${emoji}</div>
+                `;
+                mapa.appendChild(div);
+            }
+        }
+
+        function atualizarPersonagens() {
+            const container = document.getElementById('personagens');
+            container.innerHTML = '';
+
+            for (const [emoji, data] of Object.entries(personagens)) {
+                const card = document.createElement('div');
+                card.className = `personagem-card ${data.gangue}`;
+                card.innerHTML = `
+                    <div class="avatar">${emoji}</div>
+                    <div class="info">
+                        <div class="nome">${data.nome} <span style="font-size:9px;color:#888;">Lv.${data.nivel}</span></div>
+                        <div class="stats">
+                            <span class="dinheiro">$${data.dinheiro.toLocaleString()}</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="fill saude" style="width: ${data.stats.saude}%"></div>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="fill respeito" style="width: ${data.stats.respeito}%"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function adicionarLog(data) {
+            const container = document.getElementById('logs');
+            const time = new Date(data.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `
+                <div class="time">${time}</div>
+                <div class="action">${data.personagem} ${data.nome}: ${data.acao}</div>
+                <div class="detail">${data.detalhes || ''}</div>
+            `;
+            container.insertBefore(div, container.firstChild);
+
+            // Limitar a 50 logs
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function atualizarClima(clima) {
+            const emojis = {
+                'ensolarado': '☀️',
+                'nublado': '☁️',
+                'chuva': '🌧️',
+                'neblina': '🌫️'
+            };
+            document.getElementById('clima').textContent = `${emojis[clima] || '☀️'} ${clima}`;
+        }
+
+        function mostrarGuerra(msg) {
+            const el = document.getElementById('eventoGuerra');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 10000);
+        }
+
+        // Inicializar
+        inicializarMapa();
+        conectar();
+    </script>
+</body>
+</html>

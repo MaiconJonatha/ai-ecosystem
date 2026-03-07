@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoundWave – Música Para Todos</title>
+  <meta name="description"
+    content="SoundWave – Sua plataforma de streaming musical com IA. Descubra, ouça e compartilhe músicas." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="11" fill="url(#logoGrad)" />
+          <path d="M7 9C9.5 8 14.5 8 17 10M7 12C9 11 15 11 17 13M8 15C10 14.5 14 14.5 16 16" stroke="white"
+            stroke-width="1.8" stroke-linecap="round" />
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#1DB954" />
+              <stop offset="1" stop-color="#17a348" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="logo-text">SoundWave</span>
+    </div>
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item active" data-view="home" onclick="switchView('home')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+          </svg>
+          <span>Início</span>
+        </li>
+        <li class="nav-item" data-view="search" onclick="switchView('search')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <span>Buscar</span>
+        </li>
+        <li class="nav-item" data-view="library" onclick="switchView('library')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+          </svg>
+          <span>Biblioteca</span>
+        </li>
+        <li class="nav-item ai-nav" data-view="ai" onclick="switchView('ai')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/><circle cx="12" cy="12" r="3" fill="currentColor" opacity=".4"/><path d="M21 12h-2M5 12H3M12 3V1M12 23v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>IA DJ <span class="ai-badge">NOVO</span></span>
+        </li>
+        <li class="nav-item studio-nav" data-view="studio" onclick="switchView('studio')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-4z"/></svg>
+          <span>Estúdio IA</span>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-section">
+      <h3 class="sidebar-section-title">SUAS PLAYLISTS</h3>
+      <ul class="playlist-list" id="playlistList">
+        <li class="playlist-item" onclick="loadPlaylist(0)">🔥 Top Hits 2024</li>
+        <li class="playlist-item" onclick="loadPlaylist(1)">🌙 Lo-Fi Night</li>
+        <li class="playlist-item" onclick="loadPlaylist(2)">⚡ Energia Total</li>
+        <li class="playlist-item" onclick="loadPlaylist(3)">🎸 Rock Clássico</li>
+        <li class="playlist-item" onclick="loadPlaylist(4)">💜 R&B Vibes</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main" id="mainContent">
+    <!-- Home View -->
+    <div class="view active" id="view-home">
+      <header class="topbar">
+        <div class="topbar-nav">
+          <button class="nav-btn" onclick="history.back()">&#8249;</button>
+          <button class="nav-btn" onclick="history.forward()">&#8250;</button>
+        </div>
+        <div class="user-profile">
+          <div class="user-avatar">🎧</div>
+          <span class="user-name">Usuário</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <section class="featured-section">
+          <h1 class="section-title">Boa tarde! 🌟</h1>
+          <div class="quick-picks" id="quickPicks">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-subtitle">Em Destaque</h2>
+            <a href="#" class="see-all">Ver tudo</a>
+          </div>
+          <div class="cards-row" id="featuredCards">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-subtitle">Recentemente Tocados</h2>
+            <a href="#" class="see-all">Ver tudo</a>
+          </div>
+          <div class="cards-row" id="recentCards">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Search View -->
+    <div class="view" id="view-search">
+      <header class="topbar">
+        <div class="search-bar-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <input type="text" class="search-input" placeholder="O que você quer ouvir?" id="searchInput"
+            oninput="searchSongs(this.value)" />
+        </div>
+      </header>
+      <div class="content-area">
+        <h2 class="section-subtitle" style="margin-bottom:24px;">Navegar por Categorias</h2>
+        <div class="categories-grid" id="categoriesGrid">
+          <!-- Filled by JS -->
+        </div>
+        <div id="searchResults" class="search-results" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Library View -->
+    <div class="view" id="view-library">
+      <header class="topbar">
+        <h2 class="topbar-title">Sua Biblioteca</h2>
+        <button class="add-btn" onclick="showAddPlaylist()">+</button>
+      </header>
+      <div class="content-area">
+        <div class="library-filters">
+          <button class="filter-btn active">Playlists</button>
+          <button class="filter-btn">Álbuns</button>
+          <button class="filter-btn">Artistas</button>
+        </div>
+        <div class="library-list" id="libraryList">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </div>
+    <!-- AI View -->
+    <div class="view" id="view-ai">
+      <header class="topbar ai-topbar">
+        <div class="ai-header-info">
+          <div class="ai-avatar-wrap">
+            <div class="ai-avatar-pulse"></div>
+            <div class="ai-avatar">🤖</div>
+          </div>
+          <div>
+            <div class="ai-title">SoundWave <span class="ai-title-hl">IA DJ</span></div>
+            <div class="ai-subtitle">Seu assistente musical inteligente</div>
+          </div>
+        </div>
+        <div class="ai-status"><span class="ai-dot"></span> Online</div>
+      </header>
+      <div class="ai-body">
+        <div class="ai-suggestions" id="aiSuggestions">
+          <p class="suggestions-label">💡 Sugestões rápidas</p>
+          <div class="suggestion-chips" id="suggestionChips"></div>
+        </div>
+        <div class="ai-messages" id="aiMessages"></div>
+      </div>
+      <div class="ai-input-wrap">
+        <div class="ai-input-row">
+          <input type="text" id="aiInput" class="ai-input" placeholder="Peça uma música, humor ou artista..."
+            onkeydown="if(event.key==='Enter') sendAiMessage()" />
+          <button class="ai-send-btn" onclick="sendAiMessage()">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Studio View -->
+    <div class="view" id="view-studio">
+      <header class="topbar studio-topbar">
+        <div class="studio-header-info">
+          <h2 class="section-title">Estúdio de Criação IA 🎨</h2>
+          <p class="section-subtitle">Transforme ideias em música de alta qualidade</p>
+        </div>
+      </header>
+      <div class="content-area">
+        <div class="studio-generator">
+          <div class="gen-panel">
+            <h3>O que vamos criar hoje?</h3>
+            <div class="gen-input-wrap">
+              <textarea id="studioPrompt" placeholder="Descreva o estilo, instrumentos ou humor (ex: Synthwave futurista com batidas potentes, R&B suave com saxofone...)"></textarea>
+              <button class="gen-btn" id="genBtn" onclick="generateAIProduction()">
+                <div class="gen-btn-content">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                  <span>Gerar Música IA</span>
+                </div>
+                <div class="gen-progress-ring" id="genProgressRing"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <section class="section">
+          <h3 class="section-subtitle">Minhas Produções</h3>
+          <div class="cards-row" id="studioProductions">
+            <div class="empty-state">Nenhuma produção ainda. Comece a criar acima!</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Now Playing Panel -->
+  <div class="now-playing-panel" id="nowPlayingPanel" style="display:none;">
+    <div class="now-playing-bg" id="nowPlayingBg"></div>
+    <button class="close-panel" onclick="closePanel()">&#8595;</button>
+    <div class="full-album-art" id="fullAlbumArt"></div>
+    <div class="full-track-info">
+      <div>
+        <div class="full-track-name" id="fullTrackName">—</div>
+        <div class="full-track-artist" id="fullTrackArtist">—</div>
+      </div>
+      <button class="like-btn" id="likeBtn" onclick="toggleLike()">&#9825;</button>
+    </div>
+    <div class="full-progress">
+      <input type="range" class="full-progress-bar" id="fullProgressBar" min="0" max="100" value="0"
+        oninput="seekTo(this.value)" />
+      <div class="progress-times">
+        <span id="fullCurrentTime">0:00</span>
+        <span id="fullDuration">0:00</span>
+      </div>
+    </div>
+    <div class="full-controls">
+      <button class="ctrl-btn" onclick="toggleShuffle()" id="shuffleBtn" title="Aleatório">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+        </svg>
+      </button>
+      <button class="ctrl-btn large" onclick="prevTrack()" title="Anterior">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+        </svg>
+      </button>
+      <button class="ctrl-btn play-pause large" onclick="togglePlay()" id="mainPlayBtn" title="Play/Pause">
+        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+        <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+        </svg>
+      </button>
+      <button class="ctrl-btn large" onclick="nextTrack()" title="Próxima">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+        </svg>
+      </button>
+      <button class="ctrl-btn" onclick="toggleRepeat()" id="repeatBtn" title="Repetir">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+        </svg>
+      </button>
+    </div>
+    <div class="full-volume">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;opacity:.7">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+      </svg>
+      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80"
+        oninput="setVolume(this.value)" />
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;opacity:.7">
+        <path
+          d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Player Bar (bottom) -->
+  <footer class="player-bar" id="playerBar">
+    <div class="player-track" onclick="openPanel()">
+      <div class="player-thumb" id="playerThumb">🎵</div>
+      <div class="player-info">
+        <div class="player-track-name" id="playerTrackName">Nenhuma música</div>
+        <div class="player-track-artist" id="playerTrackArtist">Selecione uma música</div>
+      </div>
+      <button class="player-like" id="playerLike">&#9825;</button>
+    </div>
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="bar-btn" onclick="toggleShuffle()">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+          </svg>
+        </button>
+        <button class="bar-btn" onclick="prevTrack()">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+          </svg>
+        </button>
+        <button class="bar-play-btn" onclick="togglePlay()" id="barPlayBtn">
+          <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        </button>
+        <button class="bar-btn" onclick="nextTrack()">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+          </svg>
+        </button>
+        <button class="bar-btn" onclick="toggleRepeat()">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+          </svg>
+        </button>
+      </div>
+      <div class="progress-wrap">
+        <span class="time-label" id="currentTime">0:00</span>
+        <div class="progress-bar-wrap" onclick="seekFromBar(event)">
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            <div class="progress-thumb" id="progressThumb" style="left:0%"></div>
+          </div>
+        </div>
+        <span class="time-label" id="totalTime">0:00</span>
+      </div>
+    </div>
+    <div class="player-right">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;opacity:.7">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+      </svg>
+      <input type="range" class="bar-volume" id="barVolume" min="0" max="100" value="80"
+        oninput="setVolume(this.value)" />
+    </div>
+  </footer>
+
+  <!-- Track List Modal -->
+  <div class="track-modal" id="trackModal" style="display:none;">
+    <div class="track-modal-inner">
+      <div class="track-modal-header">
+        <div class="playlist-cover" id="modalCover">🎵</div>
+        <div>
+          <div class="playlist-modal-name" id="modalName">Playlist</div>
+          <div class="playlist-modal-meta" id="modalMeta">0 músicas</div>
+          <button class="play-all-btn" onclick="playAllInModal()">▶ Tocar Tudo</button>
+        </div>
+        <button class="close-modal" onclick="closeTrackModal()">✕</button>
+      </div>
+      <ul class="track-list" id="modalTrackList"></ul>
+    </div>
+  </div>
+
+  <audio id="audioPlayer"></audio>
+  <script src="app.js"></script>
+</body>
+
+</html>

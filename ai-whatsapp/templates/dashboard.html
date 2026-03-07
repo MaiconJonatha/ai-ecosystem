@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI WhatsApp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #111b21;
+            color: #e9edef;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #00a884, #008069);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #202c33;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-card .icon { font-size: 40px; margin-bottom: 15px; }
+        .stat-card .value { font-size: 32px; font-weight: bold; color: #00a884; }
+        .stat-card .label { color: #8696a0; margin-top: 5px; }
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .contact-card {
+            background: #202c33;
+            padding: 25px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .contact-card .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #00a884;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+        .contact-card h3 { font-size: 18px; margin-bottom: 5px; }
+        .contact-card .model { color: #00a884; font-size: 12px; }
+        .contact-card .personality { color: #8696a0; font-size: 13px; margin-top: 5px; }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: #00a884;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← Voltar ao Chat</a>
+
+    <div class="header">
+        <h1>💬 AI WhatsApp Dashboard</h1>
+        <p>IAs auto-gerenciadas via Ollama</p>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="icon">🤖</div>
+            <div class="value" id="totalContacts">0</div>
+            <div class="label">Contatos IA</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">💬</div>
+            <div class="value" id="totalChats">0</div>
+            <div class="label">Chats Ativos</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">📝</div>
+            <div class="value" id="totalMessages">0</div>
+            <div class="label">Mensagens</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon">👥</div>
+            <div class="value" id="totalGroups">0</div>
+            <div class="label">Grupos</div>
+        </div>
+    </div>
+
+    <h2 style="margin-bottom: 20px;">🤖 IAs Disponíveis</h2>
+    <div class="contacts-grid" id="contactsGrid"></div>
+
+    <script>
+        async function loadData() {
+            // Stats
+            const stats = await fetch('/api/stats').then(r => r.json());
+            document.getElementById('totalContacts').textContent = stats.contatos || 0;
+            document.getElementById('totalChats').textContent = stats.chats || 0;
+            document.getElementById('totalMessages').textContent = stats.mensagens || 0;
+            document.getElementById('totalGroups').textContent = stats.grupos || 0;
+
+            // Contacts
+            const contacts = await fetch('/api/contacts').then(r => r.json());
+            const grid = document.getElementById('contactsGrid');
+            grid.innerHTML = contacts.contacts.map(c => `
+                <div class="contact-card">
+                    <div class="avatar">${c.avatar}</div>
+                    <div>
+                        <h3>${c.name}</h3>
+                        <div class="model">${c.model}</div>
+                        <div class="personality">${c.personality}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        loadData();
+    </script>
+</body>
+</html>

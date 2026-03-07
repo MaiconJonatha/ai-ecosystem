@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jesus.ai - Coordenador Central do Ecossistema</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(218,165,32,0.06) 0%, transparent 60%);
+            animation: rotate 30s linear infinite;
+            z-index: 0;
+        }
+        @keyframes rotate { to { transform: rotate(360deg); } }
+
+        /* Header */
+        .header {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%);
+            border-bottom: 2px solid #daa520;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 30px rgba(218,165,32,0.15);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-avatar {
+            font-size: 48px;
+            filter: drop-shadow(0 0 20px rgba(218,165,32,0.6));
+            animation: glow 3s ease-in-out infinite;
+        }
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(218,165,32,0.4)); }
+            50% { filter: drop-shadow(0 0 30px rgba(218,165,32,0.8)); }
+        }
+        .header-info h1 {
+            font-size: 28px;
+            color: #daa520;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(218,165,32,0.3);
+        }
+        .header-info p {
+            color: #888;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .health-badge {
+            background: rgba(218,165,32,0.15);
+            border: 1px solid #daa520;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #daa520;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .health-badge .score { font-size: 24px; }
+        .live-dot {
+            width: 10px; height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 5px #00ff88; }
+            50% { opacity: 0.5; box-shadow: 0 0 15px #00ff88; }
+        }
+
+        /* Main content */
+        .main { position: relative; z-index: 10; padding: 20px 30px; max-width: 1400px; margin: 0 auto; }
+
+        /* Score card */
+        .score-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .score-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .score-card:hover { border-color: #daa520; transform: translateY(-2px); }
+        .score-card .number { font-size: 36px; font-weight: 800; color: #daa520; }
+        .score-card .label { font-size: 13px; color: #888; margin-top: 4px; }
+
+        /* Services grid */
+        .section-title {
+            font-size: 20px;
+            color: #daa520;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(218,165,32,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .service-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .service-card:hover { border-color: var(--svc-cor); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--svc-cor);
+        }
+        .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .service-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .service-icon { font-size: 28px; }
+        .service-name { font-size: 16px; font-weight: 700; color: #fff; }
+        .service-port { font-size: 12px; color: #666; font-family: monospace; }
+        .service-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-online { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+        .status-offline { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid rgba(255,68,68,0.3); }
+        .status-degraded { background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid rgba(255,170,0,0.3); }
+        .status-checking { background: rgba(255,255,255,0.1); color: #888; border: 1px solid rgba(255,255,255,0.2); }
+        .service-desc { font-size: 13px; color: #888; margin-bottom: 10px; }
+        .service-meta { display: flex; gap: 12px; font-size: 11px; color: #666; }
+        .service-tipo { background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 8px; }
+
+        /* Insight section */
+        .insight-section {
+            background: linear-gradient(135deg, rgba(218,165,32,0.08), rgba(218,165,32,0.02));
+            border: 1px solid rgba(218,165,32,0.2);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .insight-text {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #ddd;
+            font-style: italic;
+            padding: 16px 0;
+            min-height: 60px;
+        }
+        .insight-meta { font-size: 12px; color: #666; display: flex; justify-content: space-between; }
+        .btn-insight {
+            background: linear-gradient(135deg, #daa520, #b8860b);
+            color: #000;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-insight:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(218,165,32,0.4); }
+        .btn-insight:disabled { opacity: 0.5; cursor: wait; }
+
+        /* Command center */
+        .command-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .command-input-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .command-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(218,165,32,0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .command-input:focus { border-color: #daa520; }
+        .command-input::placeholder { color: #555; }
+        .btn-send {
+            background: linear-gradient(135deg, #daa520, #b8860b);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-send:hover { transform: scale(1.05); }
+
+        /* Log entries */
+        .log-entries {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        .log-entry {
+            background: rgba(0,0,0,0.2);
+            border-left: 3px solid #daa520;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+        }
+        .log-cmd { font-size: 13px; color: #daa520; font-weight: 600; margin-bottom: 4px; }
+        .log-resp { font-size: 13px; color: #aaa; }
+        .log-time { font-size: 11px; color: #555; margin-top: 4px; }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(218,165,32,0.3);
+            border-top: 2px solid #daa520;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Team section */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .team-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .team-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+        .team-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--team-cor);
+        }
+        .team-avatar { font-size: 40px; margin-bottom: 8px; }
+        .team-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .team-role { font-size: 11px; font-weight: 600; color: var(--team-cor); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .team-desc { font-size: 12px; color: #888; line-height: 1.4; margin-bottom: 10px; }
+        .team-skills { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+        .team-skill { background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 8px; font-size: 10px; color: #aaa; }
+        @media (max-width: 900px) {
+            .team-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .team-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Back link */
+        .back-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: #daa520; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .services-grid { grid-template-columns: repeat(2, 1fr); }
+            .score-section { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .services-grid { grid-template-columns: 1fr; }
+            .score-section { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-direction: column; gap: 12px; text-align: center; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(218,165,32,0.3); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="header-left">
+        <div class="header-avatar">✝️</div>
+        <div class="header-info">
+            <h1>Jesus.ai</h1>
+            <p>Coordenador Central do Ecossistema de IA</p>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="health-badge">
+            <span class="live-dot"></span>
+            <span>Score:</span>
+            <span class="score" id="healthScore">--</span>
+            <span>%</span>
+        </div>
+        <a href="/instagram" class="back-link">← Instagram</a>
+        <a href="/" class="back-link">← Social Network</a>
+    </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+    <!-- Score cards -->
+    <div class="score-section">
+        <div class="score-card">
+            <div class="number" id="totalServices">9</div>
+            <div class="label">Servicos Totais</div>
+        </div>
+        <div class="score-card">
+            <div class="number" id="onlineCount" style="color:#00ff88">--</div>
+            <div class="label">Online</div>
+        </div>
+        <div class="score-card">
+            <div class="number" id="offlineCount" style="color:#ff4444">--</div>
+            <div class="label">Offline</div>
+        </div>
+        <div class="score-card">
+            <div class="number" id="healthPercent" style="color:#daa520">--</div>
+            <div class="label">Saude do Ecossistema</div>
+        </div>
+    </div>
+
+    <!-- Services -->
+    <div class="section-title">🖥️ Servicos do Ecossistema</div>
+    <div class="services-grid" id="servicesGrid">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- Team do Ecossistema -->
+    <div class="section-title">🦾 Equipe do Ecossistema</div>
+    <div class="team-grid" id="teamGrid">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- Insight from Jesus.ai -->
+    <div class="insight-section">
+        <div class="section-title" style="border:none;margin:0;padding:0">✝️ Visao do Coordenador</div>
+        <div class="insight-text" id="insightText">
+            Clique no botao para receber a visao de Jesus.ai sobre o estado do ecossistema...
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <button class="btn-insight" id="btnInsight" onclick="getInsight()">✝️ Receber Visao</button>
+            <div class="insight-meta">
+                <span id="insightMeta"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command center -->
+    <div class="command-section">
+        <div class="section-title" style="border:none;margin:0;padding:0">⚡ Centro de Comando</div>
+        <p style="font-size:13px;color:#888;margin-top:4px">Envie comandos e mensagens para Jesus.ai coordenar o ecossistema</p>
+        <div class="command-input-row">
+            <input class="command-input" id="commandInput" placeholder="Digite um comando ou mensagem para Jesus.ai..." onkeydown="if(event.key==='Enter')sendCommand()">
+            <button class="btn-send" onclick="sendCommand()">Enviar ✝️</button>
+        </div>
+        <div class="log-entries" id="logEntries">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+</div>
+
+<script>
+const API = '/api/jesus';
+
+// Load dashboard
+async function loadDashboard() {
+    try {
+        var resp = await fetch(API + '/health-all');
+        var data = await resp.json();
+        
+        // Update score cards
+        document.getElementById('healthScore').textContent = data.summary.health_score;
+        document.getElementById('totalServices').textContent = data.summary.total;
+        document.getElementById('onlineCount').textContent = data.summary.online;
+        document.getElementById('offlineCount').textContent = data.summary.offline;
+        document.getElementById('healthPercent').textContent = data.summary.health_score + '%';
+        
+        // Update services grid
+        var grid = document.getElementById('servicesGrid');
+        var html = '';
+        data.services.forEach(function(svc) {
+            var statusClass = 'status-' + svc.status;
+            var statusText = svc.status === 'online' ? 'ONLINE' : svc.status === 'offline' ? 'OFFLINE' : 'DEGRADED';
+            html += '<div class="service-card" style="--svc-cor: ' + svc.cor + '">';
+            html += '  <div class="service-header">';
+            html += '    <div class="service-header-left">';
+            html += '      <span class="service-icon">' + svc.icone + '</span>';
+            html += '      <div>';
+            html += '        <div class="service-name">' + svc.nome + '</div>';
+            html += '        <div class="service-port">:' + svc.porta + '</div>';
+            html += '      </div>';
+            html += '    </div>';
+            html += '    <span class="service-status ' + statusClass + '">' + statusText + '</span>';
+            html += '  </div>';
+            html += '  <div class="service-desc">' + svc.descricao + '</div>';
+            html += '  <div class="service-meta">';
+            html += '    <span class="service-tipo">' + svc.tipo + '</span>';
+            if (svc.status === 'online' && svc.response_time_ms > 0) {
+                html += '    <span>' + Math.round(svc.response_time_ms) + 'ms</span>';
+            }
+            html += '  </div>';
+            html += '</div>';
+        });
+        grid.innerHTML = html;
+        
+    } catch (e) {
+        console.error('Dashboard error:', e);
+    }
+}
+
+// Get insight from Jesus.ai
+async function getInsight() {
+    var btn = document.getElementById('btnInsight');
+    var textEl = document.getElementById('insightText');
+    var metaEl = document.getElementById('insightMeta');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Recebendo visao...';
+    textEl.textContent = 'Jesus.ai esta contemplando o ecossistema...';
+    
+    try {
+        var resp = await fetch(API + '/insight');
+        var data = await resp.json();
+        
+        textEl.textContent = '"' + data.text + '"';
+        metaEl.textContent = 'Score: ' + data.health_score + '% | ' + data.online_count + '/' + data.total_services + ' online | ' + new Date(data.created_at).toLocaleTimeString('pt-BR');
+    } catch (e) {
+        textEl.textContent = 'Erro ao conectar com Jesus.ai. Tente novamente.';
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '✝️ Receber Visao';
+}
+
+// Send command
+async function sendCommand() {
+    var input = document.getElementById('commandInput');
+    var msg = input.value.trim();
+    if (!msg) return;
+    
+    input.value = '';
+    
+    try {
+        var resp = await fetch(API + '/command?message=' + encodeURIComponent(msg), { method: 'POST' });
+        var data = await resp.json();
+        
+        var logDiv = document.getElementById('logEntries');
+        var entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = '<div class="log-cmd">Voce: ' + data.command + '</div>' +
+                          '<div class="log-resp">✝️ Jesus.ai: ' + data.response + '</div>' +
+                          '<div class="log-time">' + new Date(data.created_at).toLocaleTimeString('pt-BR') + '</div>';
+        logDiv.insertBefore(entry, logDiv.firstChild);
+    } catch (e) {
+        console.error('Command error:', e);
+    }
+}
+
+// Load team
+async function loadTeam() {
+    try {
+        var resp = await fetch(API + '/team');
+        var data = await resp.json();
+        var grid = document.getElementById('teamGrid');
+        var html = '';
+        var keys = Object.keys(data.team);
+        keys.forEach(function(key) {
+            var m = data.team[key];
+            html += '<div class="team-card" style="--team-cor: ' + m.cor + '">';
+            html += '  <div class="team-avatar">' + m.avatar + '</div>';
+            html += '  <div class="team-name">' + m.nome + '</div>';
+            html += '  <div class="team-role" style="color:' + m.cor + '">' + m.role + '</div>';
+            html += '  <div class="team-desc">' + m.descricao + '</div>';
+            html += '  <div class="team-skills">';
+            (m.skills || []).forEach(function(s) {
+                html += '<span class="team-skill">' + s + '</span>';
+            });
+            html += '  </div>';
+            html += '</div>';
+        });
+        grid.innerHTML = html;
+    } catch(e) { console.error('Team error:', e); }
+}
+
+// Initial load
+loadDashboard();
+loadTeam();
+
+// Auto-refresh every 30 seconds
+setInterval(loadDashboard, 30000);
+</script>
+
+</body>
+</html>

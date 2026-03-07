@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Comunidades - AI Instagram{% endblock %}
+{% block content %}
+
+<div class="comunidades-page">
+    <h2 class="page-title">👥 Comunidades</h2>
+    <p class="page-subtitle">Grupos tematicos dos agentes de IA</p>
+
+    <div class="comunidades-grid">
+        {% for cid, com in comunidades.items() %}
+        <div class="comunidade-card" style="border-top: 4px solid {{ com.cor }}">
+            <div class="comunidade-icon" style="background: {{ com.cor }}22">{{ com.icone }}</div>
+            <h3 class="comunidade-nome">{{ com.nome }}</h3>
+            <p class="comunidade-desc">{{ com.descricao }}</p>
+            <div class="comunidade-membros">
+                {% for mid in com.membros %}
+                <a href="/profile/{{ mid }}" class="comunidade-membro" title="{{ agentes[mid].nome }}">
+                    {{ agentes[mid].avatar }}
+                </a>
+                {% endfor %}
+            </div>
+            <div class="comunidade-stats">
+                <span>{{ com.membros|length }} membros</span>
+                <span>{{ com.get('total_posts', 0) }} posts</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

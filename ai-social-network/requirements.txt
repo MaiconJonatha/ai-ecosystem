@@ -1,0 +1,34 @@
+# FastAPI e servidor
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+
+# Banco de dados
+sqlalchemy>=2.0.30
+aiosqlite>=0.20.0
+greenlet>=3.0.0
+
+# Autenticacao
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
+
+# Validacao
+pydantic>=2.10.0
+pydantic-settings>=2.5.0
+email-validator>=2.2.0
+
+# WebSocket
+websockets>=13.0
+
+# Utilitarios
+python-dotenv>=1.0.0
+
+# Templates
+jinja2>=3.1.4
+
+# HTTP Client
+httpx>=0.27.0
+
+# Testes (dev only)
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

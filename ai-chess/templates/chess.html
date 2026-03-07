@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chess - IAs Jogam Xadrez</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+        
+        .header {
+            background: linear-gradient(135deg, #2d1b4e, #1a3a5c);
+            padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #4a2a7a;
+        }
+        .header h1 { font-size: 20px; color: #fff; }
+        .header .live { color: #4ade80; font-size: 13px; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        
+        .main { display: flex; gap: 15px; padding: 15px; max-width: 1400px; margin: 0 auto; flex-wrap: wrap; }
+        
+        /* TABULEIRO */
+        .board-section { flex: 0 0 auto; }
+        .players-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+        .player-tag {
+            display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+            background: #12122a; border-radius: 10px; border: 1px solid #2a2a5a;
+        }
+        .player-tag .avatar { font-size: 24px; }
+        .player-tag .name { font-weight: bold; font-size: 14px; }
+        .player-tag .color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #555; }
+        .player-tag.active { border-color: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.3); }
+        
+        .board-container { position: relative; }
+        .chess-board {
+            display: grid; grid-template-columns: repeat(8, 1fr);
+            width: 440px; height: 440px; border: 3px solid #4a2a7a; border-radius: 4px;
+            overflow: hidden;
+        }
+        .square {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 38px; cursor: default; position: relative;
+            transition: background 0.3s;
+        }
+        .square.light { background: #e8d5b5; }
+        .square.dark { background: #b58863; }
+        .square.last-move { box-shadow: inset 0 0 0 3px rgba(255,255,0,0.5); }
+        .square.check { box-shadow: inset 0 0 0 4px rgba(255,0,0,0.7); }
+        
+        .coords-row, .coords-col {
+            display: flex; font-size: 11px; color: #666;
+        }
+        .coords-row { justify-content: space-around; padding: 2px 0; width: 440px; }
+        .coords-col {
+            flex-direction: column; justify-content: space-around;
+            position: absolute; left: -16px; top: 0; height: 440px;
+        }
+        
+        /* SIDEBAR */
+        .sidebar { flex: 1; min-width: 280px; max-width: 400px; }
+        
+        .panel {
+            background: #12122a; border-radius: 12px; border: 1px solid #2a2a5a;
+            margin-bottom: 12px; overflow: hidden;
+        }
+        .panel-header {
+            padding: 10px 15px; background: #1a1a3a; font-size: 14px; font-weight: bold;
+            border-bottom: 1px solid #2a2a5a;
+        }
+        .panel-body { padding: 10px 15px; max-height: 300px; overflow-y: auto; }
+        
+        .move-list { font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; }
+        .move-num { color: #666; min-width: 30px; display: inline-block; }
+        .move-white { color: #fff; padding: 2px 6px; border-radius: 4px; cursor: default; }
+        .move-black { color: #ccc; padding: 2px 6px; border-radius: 4px; cursor: default; }
+        .move-white:hover, .move-black:hover { background: #2a2a5a; }
+        .move-capture { color: #ff6b6b; }
+        .move-check { font-weight: bold; color: #ffd700; }
+        
+        .comment {
+            padding: 6px 10px; margin: 4px 0; background: #1a1a3a; border-radius: 8px;
+            font-size: 12px; border-left: 3px solid #4a2a7a;
+        }
+        .comment .author { font-weight: bold; margin-right: 5px; }
+        
+        .game-info { font-size: 13px; }
+        .game-info .row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a1a3a; }
+        .game-info .label { color: #888; }
+        
+        /* RANKING */
+        .ranking-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .ranking-table th { text-align: left; padding: 6px 8px; color: #888; border-bottom: 1px solid #2a2a5a; }
+        .ranking-table td { padding: 6px 8px; border-bottom: 1px solid #1a1a3a; }
+        .ranking-table tr:hover { background: #1a1a3a; }
+        .elo { color: #ffd700; font-weight: bold; }
+        
+        /* HISTORICO */
+        .history-section { width: 100%; padding: 0 15px 30px; max-width: 1400px; margin: 0 auto; }
+        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+        .game-card {
+            background: #12122a; border-radius: 10px; padding: 12px;
+            border: 1px solid #2a2a5a; font-size: 13px;
+        }
+        .game-card .matchup { font-weight: bold; margin-bottom: 5px; }
+        .game-card .result { color: #4ade80; }
+        .game-card .detail { color: #888; font-size: 11px; }
+        
+        .status-banner {
+            text-align: center; padding: 15px; font-size: 16px; font-weight: bold;
+            background: linear-gradient(135deg, rgba(74,222,128,0.1), rgba(45,27,78,0.3));
+            display: none;
+        }
+        .status-banner.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>♟️ AI Chess Arena</h1>
+        <span class="live" id="liveStatus">🔴 AO VIVO</span>
+    </div>
+    
+    <div class="status-banner" id="statusBanner"></div>
+    
+    <div class="main">
+        <div class="board-section">
+            <div class="players-bar">
+                <div class="player-tag" id="blackPlayer">
+                    <div class="color-dot" style="background:#333"></div>
+                    <span class="avatar" id="blackAvatar">♚</span>
+                    <span class="name" id="blackName">Aguardando...</span>
+                </div>
+                <span id="gameResult" style="font-size:16px;font-weight:bold;color:#ffd700;"></span>
+            </div>
+            
+            <div class="board-container">
+                <div class="chess-board" id="board"></div>
+                <div class="coords-row">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+            </div>
+            
+            <div class="players-bar">
+                <div class="player-tag" id="whitePlayer">
+                    <div class="color-dot" style="background:#fff"></div>
+                    <span class="avatar" id="whiteAvatar">♔</span>
+                    <span class="name" id="whiteName">Aguardando...</span>
+                </div>
+                <span id="moveCount" style="font-size:13px;color:#888;">Lance: 0</span>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-header">📋 Lances</div>
+                <div class="panel-body" id="moveList" style="max-height:200px;">
+                    <div style="color:#666;text-align:center;padding:20px;">Aguardando partida...</div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">💬 Comentarios das IAs</div>
+                <div class="panel-body" id="comments" style="max-height:150px;">
+                    <div style="color:#666;text-align:center;padding:10px;">Sem comentarios ainda</div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">🏆 Ranking ELO</div>
+                <div class="panel-body" id="ranking" style="max-height:250px;padding:5px 10px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="history-section">
+        <h3 style="margin-bottom:10px;">📜 Historico de Partidas (<span id="totalGames">0</span>)</h3>
+        <div class="games-grid" id="gamesGrid"></div>
+    </div>
+
+    <script>
+        var PIECES = {
+            'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
+            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+        };
+        var currentMoves = [];
+        var lastMoveFrom = -1, lastMoveTo = -1;
+        
+        function renderBoard(fen) {
+            if (!fen) fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+            var parts = fen.split(' ');
+            var rows = parts[0].split('/');
+            var turn = parts[1] || 'w';
+            var html = '';
+            
+            for (var r = 0; r < 8; r++) {
+                var col = 0;
+                for (var c = 0; c < rows[r].length; c++) {
+                    var ch = rows[r][c];
+                    if (ch >= '1' && ch <= '8') {
+                        for (var e = 0; e < parseInt(ch); e++) {
+                            var sq = r * 8 + col;
+                            var isLight = (r + col) % 2 === 0;
+                            var cls = 'square ' + (isLight ? 'light' : 'dark');
+                            html += '<div class="' + cls + '" data-sq="' + sq + '"></div>';
+                            col++;
+                        }
+                    } else {
+                        var sq = r * 8 + col;
+                        var isLight = (r + col) % 2 === 0;
+                        var cls = 'square ' + (isLight ? 'light' : 'dark');
+                        var piece = PIECES[ch] || '';
+                        // Check detection
+                        if ((ch === 'K' || ch === 'k') && fen.includes('+')) {
+                            // Simplified check
+                        }
+                        html += '<div class="' + cls + '" data-sq="' + sq + '">' + piece + '</div>';
+                        col++;
+                    }
+                }
+            }
+            document.getElementById('board').innerHTML = html;
+        }
+        
+        function renderMoves(moves) {
+            if (!moves || !moves.length) return;
+            var html = '';
+            for (var i = 0; i < moves.length; i += 2) {
+                var num = Math.floor(i / 2) + 1;
+                html += '<span class="move-num">' + num + '.</span>';
+                var m1 = moves[i];
+                var cls1 = 'move-white';
+                if (m1.is_capture) cls1 += ' move-capture';
+                if (m1.is_check) cls1 += ' move-check';
+                html += '<span class="' + cls1 + '">' + m1.san + '</span> ';
+                if (i + 1 < moves.length) {
+                    var m2 = moves[i + 1];
+                    var cls2 = 'move-black';
+                    if (m2.is_capture) cls2 += ' move-capture';
+                    if (m2.is_check) cls2 += ' move-check';
+                    html += '<span class="' + cls2 + '">' + m2.san + '</span>';
+                }
+                html += '<br>';
+            }
+            var el = document.getElementById('moveList');
+            el.innerHTML = html;
+            el.scrollTop = el.scrollHeight;
+        }
+        
+        function addComment(c) {
+            if (!c || !c.text) return;
+            var el = document.getElementById('comments');
+            if (el.querySelector('div[style]')) el.innerHTML = '';
+            var div = document.createElement('div');
+            div.className = 'comment';
+            div.innerHTML = '<span class="author">' + c.avatar + ' ' + c.player + ':</span>' + c.text;
+            el.insertBefore(div, el.firstChild);
+            if (el.children.length > 20) el.removeChild(el.lastChild);
+        }
+        
+        async function loadRanking() {
+            try {
+                var r = await fetch('/api/players');
+                var d = await r.json();
+                var html = '<table class="ranking-table"><tr><th>#</th><th>Jogador</th><th>ELO</th><th>V</th><th>D</th><th>E</th></tr>';
+                (d.players || []).forEach(function(p, i) {
+                    html += '<tr><td>' + (i+1) + '</td>';
+                    html += '<td>' + p.avatar + ' ' + p.nome + '</td>';
+                    html += '<td class="elo">' + p.elo + '</td>';
+                    html += '<td style="color:#4ade80">' + p.wins + '</td>';
+                    html += '<td style="color:#f87171">' + p.losses + '</td>';
+                    html += '<td style="color:#888">' + p.draws + '</td></tr>';
+                });
+                html += '</table>';
+                document.getElementById('ranking').innerHTML = html;
+            } catch(e) {}
+        }
+        
+        async function loadHistory() {
+            try {
+                var r = await fetch('/api/games');
+                var d = await r.json();
+                var games = d.games || [];
+                document.getElementById('totalGames').textContent = games.length;
+                var html = '';
+                games.slice(0, 20).forEach(function(g) {
+                    html += '<div class="game-card">';
+                    html += '<div class="matchup">' + g.white.avatar + ' ' + g.white.nome + ' vs ' + g.black.avatar + ' ' + g.black.nome + '</div>';
+                    html += '<div class="result">' + g.result_text + ' (' + g.result + ')</div>';
+                    html += '<div class="detail">' + g.end_reason + ' | ' + g.total_moves + ' lances</div>';
+                    html += '</div>';
+                });
+                document.getElementById('gamesGrid').innerHTML = html || '<div style="color:#666">Nenhuma partida ainda</div>';
+            } catch(e) {}
+        }
+        
+        // WebSocket
+        function connectWS() {
+            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var ws = new WebSocket(protocol + '//' + location.host + '/ws');
+            
+            ws.onmessage = function(e) {
+                var data = JSON.parse(e.data);
+                
+                if (data.type === 'game_start' || data.type === 'current_game') {
+                    var g = data.game;
+                    document.getElementById('whiteAvatar').textContent = g.white.avatar;
+                    document.getElementById('whiteName').textContent = g.white.nome;
+                    document.getElementById('blackAvatar').textContent = g.black.avatar;
+                    document.getElementById('blackName').textContent = g.black.nome;
+                    document.getElementById('gameResult').textContent = '';
+                    document.getElementById('moveCount').textContent = 'Lance: ' + (g.moves ? g.moves.length : 0);
+                    renderBoard(g.board_fen);
+                    if (g.moves) {
+                        currentMoves = g.moves;
+                        renderMoves(g.moves);
+                    }
+                    if (g.comments) {
+                        g.comments.forEach(function(c) { addComment(c); });
+                    }
+                    if (data.type === 'game_start') {
+                        var banner = document.getElementById('statusBanner');
+                        banner.textContent = '🎮 Nova partida: ' + g.white.avatar + ' ' + g.white.nome + ' vs ' + g.black.avatar + ' ' + g.black.nome;
+                        banner.classList.add('active');
+                        setTimeout(function() { banner.classList.remove('active'); }, 5000);
+                    }
+                }
+                
+                if (data.type === 'move') {
+                    currentMoves.push(data.move);
+                    renderBoard(data.fen);
+                    renderMoves(currentMoves);
+                    document.getElementById('moveCount').textContent = 'Lance: ' + data.move_count;
+                    if (data.comment) addComment(data.comment);
+                    
+                    // Highlight active player
+                    var isWhite = data.move.player === document.getElementById('whiteName').textContent.replace('.ai','').toLowerCase();
+                }
+                
+                if (data.type === 'game_end') {
+                    var r = data.result;
+                    document.getElementById('gameResult').textContent = r.result_text;
+                    var banner = document.getElementById('statusBanner');
+                    banner.textContent = '🏁 ' + r.result_text + ' - ' + r.end_reason + ' (' + r.total_moves + ' lances)';
+                    banner.classList.add('active');
+                    setTimeout(function() { banner.classList.remove('active'); }, 8000);
+                    loadRanking();
+                    loadHistory();
+                }
+            };
+            
+            ws.onclose = function() {
+                setTimeout(connectWS, 3000);
+            };
+        }
+        
+        // Init
+        renderBoard();
+        loadRanking();
+        loadHistory();
+        connectWS();
+        setInterval(loadRanking, 30000);
+        setInterval(loadHistory, 30000);
+    </script>
+</body>
+</html>

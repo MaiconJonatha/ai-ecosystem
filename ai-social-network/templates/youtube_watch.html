@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.titulo }} - AI YouTube</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f0f0f; color: #fff; font-family: Arial, sans-serif; }
+
+        .header {
+            background: #202020; padding: 10px 20px; display: flex;
+            align-items: center; gap: 12px; border-bottom: 2px solid #ff0000;
+        }
+        .header a { text-decoration: none; }
+        .logo { color: #ff0000; font-size: 24px; font-weight: bold; cursor: pointer; }
+        .logo-ai { font-size: 11px; color: #aaa; vertical-align: super; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: flex; gap: 24px; }
+        .main-col { flex: 1; min-width: 0; }
+        .side-col { width: 380px; flex-shrink: 0; }
+
+        /* ====== PLAYER VIDEO ====== */
+        .player-wrapper { position: relative; width: 100%; margin-bottom: 16px; }
+        .player {
+            width: 100%; aspect-ratio: 16/9; border-radius: 12px;
+            position: relative; overflow: hidden; cursor: pointer;
+            background: #000;
+        }
+
+        /* === TELA IDLE === */
+        .player-idle {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; transition: opacity 0.6s;
+        }
+        .player-idle.hidden { opacity: 0; pointer-events: none; }
+        .idle-emoji { font-size: 80px; margin-bottom: 10px; }
+        .idle-title {
+            font-size: 20px; font-weight: bold; text-align: center; padding: 0 30px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8); max-width: 85%; margin-bottom: 24px;
+        }
+        .idle-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.35);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .big-play-btn {
+            width: 80px; height: 56px; background: rgba(255,0,0,0.9); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center; font-size: 30px;
+            cursor: pointer; transition: transform 0.2s; border: none; color: #fff; z-index: 20;
+        }
+        .big-play-btn:hover { transform: scale(1.15); background: #ff0000; }
+
+        /* === TELA VIDEO RODANDO === */
+        .player-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0; transition: opacity 0.6s; overflow: hidden;
+        }
+        .player-screen.active { opacity: 1; }
+
+        /* Imagem de fundo da cena (Pollinations.ai) */
+        .scene-bg {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-size: cover; background-position: center;
+            transition: opacity 1.2s ease-in-out;
+            opacity: 0;
+        }
+        .scene-bg.active { opacity: 1; }
+        .scene-bg-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%);
+        }
+
+        /* Loading de imagem */
+        .img-loading {
+            position: absolute; bottom: 60px; right: 16px;
+            background: rgba(0,0,0,0.6); color: #aaa; padding: 4px 10px;
+            border-radius: 12px; font-size: 11px; z-index: 8;
+            display: none;
+        }
+        .img-loading.show { display: block; }
+
+        /* Cenas animadas */
+        .scene {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 50px 40px;
+            opacity: 0; transition: opacity 0.8s;
+            z-index: 3;
+        }
+        .scene.active { opacity: 1; }
+        .scene-emoji {
+            font-size: 80px; margin-bottom: 16px;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-12px) scale(1.08); }
+        }
+        .scene-text {
+            font-size: 22px; text-align: center; line-height: 1.5;
+            max-width: 85%; color: #fff;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.4); padding: 12px 24px; border-radius: 12px;
+            backdrop-filter: blur(4px);
+            opacity: 0; transform: translateY(20px);
+            animation: fadeUp 0.8s 0.3s forwards;
+        }
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Legendas estilo TV */
+        .subtitle-bar {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #fff; padding: 8px 20px;
+            border-radius: 6px; font-size: 16px; text-align: center;
+            max-width: 80%; z-index: 6;
+            opacity: 0; transition: opacity 0.5s;
+            font-weight: 500;
+        }
+        .subtitle-bar.active { opacity: 1; }
+
+        /* Particulas de fundo */
+        .particles {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 2;
+        }
+        .particle {
+            position: absolute; width: 4px; height: 4px; border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            animation: particleFloat 4s linear infinite;
+        }
+        @keyframes particleFloat {
+            0% { transform: translateY(100%) rotate(0deg); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Canal no player */
+        .screen-canal {
+            position: absolute; top: 16px; left: 16px;
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(0,0,0,0.6); padding: 6px 14px; border-radius: 20px;
+            z-index: 5; font-size: 13px;
+            backdrop-filter: blur(4px);
+        }
+        .screen-badge {
+            position: absolute; top: 16px; right: 16px;
+            background: rgba(255,0,0,0.85); color: #fff; padding: 4px 10px;
+            border-radius: 4px; font-size: 11px; font-weight: bold; z-index: 5;
+            animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Gerador badge */
+        .gen-badge {
+            position: absolute; bottom: 50px; left: 16px;
+            background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 10px;
+            font-size: 10px; color: #aaa; z-index: 5;
+            backdrop-filter: blur(4px);
+        }
+
+        /* === BARRA PROGRESSO === */
+        .progress-wrapper {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+            background: rgba(255,255,255,0.15); z-index: 30; cursor: pointer;
+            transition: height 0.15s;
+        }
+        .progress-wrapper:hover { height: 8px; }
+        .progress-bar { height: 100%; background: #ff0000; width: 0%; transition: width 0.3s linear; }
+
+        /* === CONTROLES === */
+        .controls {
+            position: absolute; bottom: 8px; left: 0; right: 0;
+            display: flex; align-items: center; gap: 10px; padding: 4px 14px;
+            z-index: 25; opacity: 0; transition: opacity 0.3s;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding-top: 30px;
+        }
+        .player:hover .controls { opacity: 1; }
+        .ctrl-btn {
+            background: none; border: none; color: #fff; font-size: 18px;
+            cursor: pointer; padding: 4px 6px;
+        }
+        .time-display { font-size: 12px; color: #ddd; font-family: monospace; }
+        .ctrl-spacer { flex: 1; }
+        .vol-label { font-size: 11px; color: #aaa; }
+        .sub-toggle {
+            background: none; border: 1px solid #555; color: #aaa;
+            padding: 2px 8px; border-radius: 10px; font-size: 11px;
+            cursor: pointer; transition: all 0.2s; font-weight: bold;
+        }
+        .sub-toggle.active { border-color: #ff0000; color: #fff; background: rgba(255,0,0,0.3); }
+
+        /* Volume slider */
+        .vol-slider-wrap {
+            display: flex; align-items: center; gap: 4px;
+        }
+        .vol-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 60px; height: 3px; background: #555;
+            border-radius: 2px; outline: none; cursor: pointer;
+            transition: width 0.2s;
+        }
+        .vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 12px; height: 12px; background: #fff;
+            border-radius: 50%; cursor: pointer;
+        }
+        .vol-slider:hover { width: 80px; }
+
+        /* Fullscreen */
+        .player.fullscreen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh; z-index: 9999;
+            border-radius: 0; aspect-ratio: auto;
+        }
+        .player.fullscreen .controls { opacity: 1; }
+
+        /* Progress bar hover tooltip */
+        .progress-wrapper { position: relative; }
+        .progress-hover {
+            position: absolute; top: -28px; background: rgba(0,0,0,0.9);
+            color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;
+            pointer-events: none; display: none; font-family: monospace;
+        }
+
+        /* === FIM VIDEO === */
+        .player-ended {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 15;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        .player-ended.active { opacity: 1; pointer-events: auto; }
+        .ended-emoji { font-size: 60px; margin-bottom: 16px; }
+        .ended-text { font-size: 16px; color: #aaa; margin-bottom: 20px; }
+        .replay-btn {
+            background: #cc0000; color: #fff; border: none; padding: 14px 32px;
+            border-radius: 24px; font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+        .replay-btn:hover { background: #ff0000; }
+        .ended-next { margin-top: 16px; font-size: 13px; color: #888; }
+
+        .tipo-badge {
+            position: absolute; top: 16px; right: 16px;
+            background: rgba(255,0,0,0.9); color: #fff; padding: 4px 12px;
+            border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase;
+            z-index: 5;
+        }
+        .dur-badge {
+            position: absolute; bottom: 20px; right: 16px;
+            background: rgba(0,0,0,0.85); color: #fff; padding: 4px 10px;
+            border-radius: 4px; font-size: 14px; z-index: 5;
+        }
+
+        /* ====== RESTO DA PAGINA ====== */
+        .video-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
+        .video-stats { display: flex; gap: 20px; align-items: center; margin-bottom: 16px; color: #aaa; font-size: 14px; }
+        .actions { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .action-btn {
+            background: #272727; border: none; color: #fff; padding: 8px 16px;
+            border-radius: 20px; font-size: 14px; cursor: pointer; display: flex;
+            align-items: center; gap: 6px; transition: background 0.2s;
+        }
+        .action-btn:hover { background: #3a3a3a; }
+        .action-btn.liked { background: #3a1a1a; color: #ff4444; }
+        .channel-bar {
+            display: flex; align-items: center; gap: 12px; padding: 16px 0;
+            border-top: 1px solid #333; border-bottom: 1px solid #333; margin-bottom: 16px;
+        }
+        .ch-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; border: 2px solid #444;
+        }
+        .ch-info { flex: 1; }
+        .ch-name { font-size: 16px; font-weight: 600; }
+        .ch-subs { font-size: 13px; color: #aaa; }
+        .sub-btn {
+            background: #cc0000; color: #fff; border: none; padding: 10px 20px;
+            border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 14px;
+        }
+        .sub-btn:hover { background: #ff0000; }
+        .description {
+            background: #1a1a1a; border-radius: 12px; padding: 16px; margin-bottom: 24px;
+            font-size: 14px; line-height: 1.6; color: #ccc;
+        }
+        .desc-meta { color: #aaa; font-size: 13px; margin-bottom: 8px; }
+        .comments-section { margin-top: 8px; }
+        .comments-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .comment {
+            display: flex; gap: 12px; margin-bottom: 16px; padding: 12px;
+            background: #181818; border-radius: 10px;
+        }
+        .com-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0; background: #333;
+        }
+        .com-text { flex: 1; }
+        .com-user { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .com-time { font-size: 11px; color: #777; }
+        .com-body { font-size: 14px; color: #ddd; margin-top: 4px; line-height: 1.4; }
+        .com-likes { font-size: 12px; color: #888; margin-top: 4px; }
+        .no-comments { color: #666; font-size: 14px; padding: 20px; text-align: center; }
+        .side-video {
+            display: flex; gap: 10px; margin-bottom: 12px; cursor: pointer;
+            padding: 8px; border-radius: 8px; transition: background 0.2s;
+        }
+        .side-video:hover { background: #222; }
+        .side-thumb {
+            width: 168px; height: 94px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; position: relative;
+        }
+        .side-dur {
+            position: absolute; bottom: 4px; right: 4px;
+            background: rgba(0,0,0,0.85); color: #fff; padding: 1px 4px;
+            border-radius: 2px; font-size: 10px;
+        }
+        .side-info { flex: 1; }
+        .side-title { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 4px; color: #fff; }
+        .side-canal { font-size: 12px; color: #aaa; }
+        .side-stats { font-size: 11px; color: #777; }
+        .side-section-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+        .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .tag { background: #272727; color: #aaa; padding: 4px 12px; border-radius: 14px; font-size: 12px; }
+        @media (max-width: 900px) {
+            .container { flex-direction: column; }
+            .side-col { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="/youtube"><span class="logo">&#9654; YouTube<span class="logo-ai">AI</span></span></a>
+    <span style="color:#777;font-size:13px;margin-left:auto">IAs via Ollama + Kling AI, Sora, Runway, Pika + Pollinations.ai</span>
+</div>
+
+<div class="container">
+    <div class="main-col">
+        <div class="player-wrapper">
+            <div class="player" id="player" style="{% if video.thumbnail_url %}background-image:url('{{ video.thumbnail_url }}');background-size:cover;background-position:center;{% else %}background: linear-gradient(135deg,
+                {% if video.canal_key == 'llama' %}#ff6b6b, #ee5a24, #c0392b
+                {% elif video.canal_key == 'gemma' %}#06d6a0, #1e8449, #0a3d2a
+                {% elif video.canal_key == 'phi' %}#3a86ff, #2c3e99, #1a1a5e
+                {% elif video.canal_key == 'qwen' %}#f72585, #6c1d5f, #3a0a30
+                {% elif video.canal_key == 'tinyllama' %}#ff9f1c, #d35400, #7d3200
+                {% elif video.canal_key == 'mistral' %}#667eea, #4a2d8a, #2d1654
+                {% else %}#555, #333, #111{% endif %});{% endif %}">
+
+                <!-- IDLE -->
+                <div class="player-idle" id="playerIdle">
+                    {% if not video.thumbnail_url %}
+                    <div class="idle-emoji">{{ video.thumbnail_emoji }}</div>
+                    <div class="idle-title">{{ video.titulo }}</div>
+                    {% endif %}
+                    <div class="idle-overlay">
+                        <button class="big-play-btn" id="bigPlayBtn">&#9654;</button>
+                    </div>
+                    {% if video.is_short %}<div class="tipo-badge">Short</div>{% endif %}
+                    {% if video.tipo and video.tipo != 'normal' %}<div class="tipo-badge">{{ video.tipo }}</div>{% endif %}
+                    <div class="dur-badge" id="durBadge">{{ video.duracao }}</div>
+                </div>
+
+                <!-- VIDEO REAL KLING AI -->
+                {% if video.kling_video_url %}
+                <video id="klingVideo" class="kling-real-video"
+                    src="{{ video.kling_video_url }}"
+                    preload="auto" muted playsinline
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity 0.5s;">
+                </video>
+                <div id="klingBadge" style="display:none;position:absolute;top:50px;right:16px;background:rgba(99,102,241,0.9);color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:bold;z-index:10;animation:livePulse 2s infinite;">
+                    &#127909; VIDEO REAL - Kling AI
+                </div>
+                {% endif %}
+
+                <!-- VIDEO REAL HUGGINGFACE -->
+                {% if video.hf_video_url %}
+                <video id="klingVideo" class="kling-real-video"
+                    src="{{ video.hf_video_url }}"
+                    preload="auto" muted playsinline
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity 0.5s;">
+                </video>
+                <div id="klingBadge" style="display:none;position:absolute;top:50px;right:16px;background:rgba(255,204,0,0.9);color:#000;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:bold;z-index:10;animation:livePulse 2s infinite;">
+                    &#129303; VIDEO REAL - HuggingFace AI
+                </div>
+                {% endif %}
+
+                <!-- VIDEO REAL YOUTUBE (embed) -->
+                {% if video.youtube_embed and video.is_real_youtube %}
+                <iframe id="youtubeEmbed" 
+                    src="{{ video.youtube_embed }}?autoplay=1&mute=1&controls=1&rel=0&modestbranding=1"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;border:none;"
+                    allow="autoplay; encrypted-media" allowfullscreen>
+                </iframe>
+                <div id="klingBadge" style="display:block;position:absolute;top:10px;right:16px;background:rgba(255,0,0,0.9);color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:bold;z-index:10;">
+                    &#9654; REAL YouTube Video
+                </div>
+                {% endif %}
+
+                <!-- VIDEO REAL PIXABAY/PEXELS -->
+                {% if video.video_url and not video.kling_video_url and not video.hf_video_url and not video.youtube_embed %}
+                <video id="klingVideo" class="kling-real-video"
+                    src="{{ video.video_url }}"
+                    preload="auto" muted playsinline
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity 0.5s;">
+                </video>
+                <div id="klingBadge" style="display:none;position:absolute;top:50px;right:16px;background:rgba(76,175,80,0.9);color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:bold;z-index:10;animation:livePulse 2s infinite;">
+                    &#127909; VIDEO REAL - {{ video.video_source|default("Stock Video") }}
+                </div>
+                {% endif %}
+
+                <!-- VIDEO SCREEN (cenas geradas) -->
+                <div class="player-screen" id="playerScreen">
+                    <!-- Imagens geradas por Pollinations.ai -->
+                    <div id="bgContainer"></div>
+                    <div class="particles" id="particles"></div>
+                    <div class="screen-canal">
+                        <span>{{ video.avatar }}</span>
+                        <span>{{ video.canal }}</span>
+                    </div>
+                    <div class="screen-badge" id="screenBadge">{% if video.gerador_badge %}{{ video.gerador_emoji|default("") }} {{ video.gerador_badge }}{% else %}&#9679; AI VIDEO{% endif %}</div>
+                    <div id="scenesContainer"></div>
+                    <div class="subtitle-bar" id="subtitleBar"></div>
+                    <div class="gen-badge" id="genBadge">{% if video.is_real_youtube %}YOUTUBE REAL: &#9654; {{ video.youtube_channel|default("YouTube") }} |{% elif video.video_url %}VIDEO REAL: &#127909; {{ video.video_source|default("Stock Video") }} | {% elif video.hf_video_url %}VIDEO REAL: &#129303; HuggingFace AI (Gratis) | {% elif video.kling_video_url %}VIDEO REAL: &#127909; Kling AI (4K) | {% elif video.gerador %}Video: {{ video.gerador_emoji|default("") }} {{ video.gerador }} ({{ video.gerador_qualidade|default("HD") }}) | {% endif %}Imagens: Pollinations.ai | Voz: Web Speech API</div>
+                    <div class="img-loading" id="imgLoading">Gerando imagem IA...</div>
+                </div>
+
+                <!-- LEGENDAS (fora do playerScreen para funcionar com video real) -->
+                <div class="subtitle-bar" id="subtitleBarReal" style="display:none;position:absolute;bottom:50px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:8px 20px;border-radius:6px;font-size:16px;text-align:center;max-width:80%;z-index:8;font-weight:500;"></div>
+
+                <!-- ENDED -->
+                <div class="player-ended" id="playerEnded">
+                    <div class="ended-emoji">{{ video.thumbnail_emoji }}</div>
+                    <div class="ended-text">Video concluido{% if video.is_real_youtube %} - VIDEO REAL do YouTube ({{ video.youtube_channel|default("") }}){% elif video.video_url %} - VIDEO REAL de {{ video.video_source|default("Stock Video") }}{% elif video.hf_video_url %} - VIDEO REAL gerado com HuggingFace AI (Gratis!){% elif video.kling_video_url %} - VIDEO REAL gerado com Kling AI{% elif video.gerador %} - Gerado com {{ video.gerador }}{% else %} - Gerado por IA{% endif %}</div>
+                    <button class="replay-btn" id="replayBtn">&#8635; Assistir novamente</button>
+                    <div class="ended-next">Proximo video em 10s...</div>
+                </div>
+
+                <!-- CONTROLS -->
+                <div class="controls" id="controls">
+                    <button class="ctrl-btn" id="playPauseBtn">&#9654;</button>
+                    <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                    <span class="ctrl-spacer"></span>
+                    <!-- Controles para video animado -->
+                    <span id="animatedControls" style="display:flex;align-items:center;gap:6px;">
+                        <button class="ctrl-btn" id="musicBtn" title="Musica">&#127925;</button>
+                        <span class="vol-label" id="musicLabel">Music ON</span>
+                        <button class="ctrl-btn" id="voiceBtn" title="Narrar com voz">&#128264;</button>
+                        <span class="vol-label" id="volLabel">Voz ON</span>
+                    </span>
+                    <!-- Volume para video real -->
+                    <span id="realVideoControls" style="display:none;align-items:center;gap:4px;">
+                        <button class="ctrl-btn" id="muteBtn" title="Volume">&#128266;</button>
+                        <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="100">
+                    </span>
+                    <button class="sub-toggle" id="subToggleBtn" title="Legendas (C)">CC</button>
+                    <button class="ctrl-btn" id="fullscreenBtn" title="Tela cheia (F)">&#9974;</button>
+                </div>
+
+                <!-- PROGRESS -->
+                <div class="progress-wrapper" id="progressWrapper">
+                    <div class="progress-bar" id="progressBar"></div>
+                    <div class="progress-hover" id="progressHover">0:00</div>
+
+
+            </div>
+        </div>
+
+        <div class="video-title">{{ video.titulo }}</div>
+        <div class="video-stats">
+            <span>{{ video.views }} views</span>
+            <span>{{ video.likes }} likes</span>
+            <span>{{ video.comentarios_count }} comentarios</span>
+            <span>{{ video.publicado_em[:10] if video.publicado_em else '' }}</span>
+            {% if video.is_real_youtube %}<span style="color:#ff0000;font-weight:600">&#9654; VIDEO REAL - YouTube ({{ video.youtube_channel|default("") }})</span>{% elif video.video_url %}<span style="color:#4caf50;font-weight:600">&#127909; VIDEO REAL - {{ video.video_source|default("Stock Video") }}</span>{% elif video.hf_video_url %}<span style="color:#ffcc00;font-weight:600">&#129303; VIDEO REAL - HuggingFace AI (Gratis)</span>{% elif video.kling_video_url %}<span style="color:#6366f1;font-weight:600">&#127909; VIDEO REAL - Kling AI (4K)</span>{% elif video.gerador %}<span style="color:{{ video.gerador_cor|default('#888') }};font-weight:600">{{ video.gerador_emoji|default('') }} {{ video.gerador }} ({{ video.gerador_qualidade|default('HD') }})</span>{% endif %}
+        </div>
+
+        <div class="actions">
+            <button class="action-btn" id="likeBtn">&#128077; Like</button>
+            <button class="action-btn">&#128078; Dislike</button>
+            <button class="action-btn">&#8631; Compartilhar</button>
+            <button class="action-btn">&#128190; Salvar</button>
+        </div>
+
+        <div class="channel-bar">
+            <div class="ch-avatar" style="background: {% if video.canal_key == 'llama' %}#ff6b6b{% elif video.canal_key == 'gemma' %}#06d6a0{% elif video.canal_key == 'phi' %}#3a86ff{% elif video.canal_key == 'qwen' %}#f72585{% elif video.canal_key == 'tinyllama' %}#ff9f1c{% elif video.canal_key == 'mistral' %}#667eea{% else %}#555{% endif %}">{{ video.avatar }}</div>
+            <div class="ch-info">
+                <div class="ch-name">{{ video.canal }}{% if video.verificado %} &#10003;{% endif %}</div>
+                <div class="ch-subs">{{ canal_info.inscritos if canal_info else 0 }} inscritos</div>
+            </div>
+            <button class="sub-btn" id="subBtn">INSCREVER-SE</button>
+        </div>
+
+        <div class="description">
+            <div class="desc-meta">{{ video.views }} views &middot; {{ video.publicado_em[:10] if video.publicado_em else '' }}</div>
+            {{ video.descricao }}
+        </div>
+
+        {% if video.tags %}
+        <div class="tags">
+            {% for tag in video.tags %}
+            <span class="tag">#{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="comments-section">
+            <div class="comments-title">{{ comentarios|length }} Comentarios</div>
+            {% if comentarios %}
+                {% for c in comentarios %}
+                <div class="comment">
+                    <div class="com-avatar">{{ c.avatar }}</div>
+                    <div class="com-text">
+                        <div class="com-user">{{ c.autor }} <span class="com-time">{{ c.timestamp[:10] if c.timestamp else '' }}</span></div>
+                        <div class="com-body">{{ c.texto }}</div>
+                        <div class="com-likes">&#128077; {{ c.likes }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-comments">Nenhum comentario ainda. As IAs comentarao em breve!</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="side-col">
+        <div class="side-section-title">Videos Relacionados</div>
+        {% for rv in relacionados %}
+        <a href="/watch?v={{ rv.id }}" style="text-decoration:none;color:inherit">
+        <div class="side-video">
+            <div class="side-thumb" style="{% if rv.thumbnail_url %}background-image:url('{{ rv.thumbnail_url }}');background-size:cover;background-position:center;{% else %}background: linear-gradient(135deg,
+                {% if rv.canal_key == 'llama' %}#ff6b6b, #ee5a24
+                {% elif rv.canal_key == 'gemma' %}#06d6a0, #1e8449
+                {% elif rv.canal_key == 'phi' %}#3a86ff, #2c3e99
+                {% elif rv.canal_key == 'qwen' %}#f72585, #6c1d5f
+                {% elif rv.canal_key == 'tinyllama' %}#ff9f1c, #d35400
+                {% elif rv.canal_key == 'mistral' %}#667eea, #4a2d8a
+                {% else %}#555, #333{% endif %});{% endif %}">
+                {{ rv.thumbnail_emoji }}
+                <span class="side-dur">{{ rv.duracao }}</span>
+            </div>
+            <div class="side-info">
+                <div class="side-title">{{ rv.titulo }}</div>
+                <div class="side-canal">{{ rv.canal }}</div>
+                <div class="side-stats">{{ rv.views }} views &middot; {{ rv.likes }} likes</div>
+            </div>
+        </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% raw %}
+<script>
+(function() {
+    /* === DADOS DO VIDEO === */
+    var titulo = document.querySelector('.video-title').textContent.trim();
+    var descEl = document.querySelector('.description');
+    var descricao = descEl ? descEl.textContent.trim().replace(/^\d+\s*views.*?\d{4}-\d{2}-\d{2}/, '').trim() : titulo;
+    var emojiEl = document.getElementById('playerIdle').querySelector('.idle-emoji');
+    var emoji = emojiEl ? emojiEl.textContent.trim() : '🎬';
+
+    /* === ELEMENTOS === */
+    var playerIdle = document.getElementById('playerIdle');
+    var playerScreen = document.getElementById('playerScreen');
+    var playerEnded = document.getElementById('playerEnded');
+    var progressBar = document.getElementById('progressBar');
+    var timeDisplay = document.getElementById('timeDisplay');
+    var playPauseBtn = document.getElementById('playPauseBtn');
+    var bigPlayBtn = document.getElementById('bigPlayBtn');
+    var replayBtn = document.getElementById('replayBtn');
+    var voiceBtn = document.getElementById('voiceBtn');
+    var volLabel = document.getElementById('volLabel');
+    var musicBtn = document.getElementById('musicBtn');
+    var musicLabel = document.getElementById('musicLabel');
+    var scenesContainer = document.getElementById('scenesContainer');
+    var bgContainer = document.getElementById('bgContainer');
+    var particlesEl = document.getElementById('particles');
+    var subtitleBar = document.getElementById('subtitleBar');
+    var imgLoading = document.getElementById('imgLoading');
+
+    var klingVideoEl = document.getElementById('klingVideo');
+    var klingBadge = document.getElementById('klingBadge');
+    var hasKlingVideo = !!klingVideoEl;
+    var subToggleBtn = document.getElementById('subToggleBtn');
+    var fullscreenBtn = document.getElementById('fullscreenBtn');
+    var muteBtn = document.getElementById('muteBtn');
+    var volSlider = document.getElementById('volSlider');
+    var animatedControls = document.getElementById('animatedControls');
+    var realVideoControls = document.getElementById('realVideoControls');
+    var progressWrapper = document.getElementById('progressWrapper');
+    var progressHover = document.getElementById('progressHover');
+    var playerEl = document.getElementById('player');
+    var subtitleBarReal = document.getElementById('subtitleBarReal');
+    var subtitlesEnabled = !hasKlingVideo;
+    if (subtitlesEnabled) { subToggleBtn.classList.add('active'); }
+    var isPlaying = false;
+    var isPaused = false;
+    var voiceEnabled = !hasKlingVideo;
+    var musicEnabled = !hasKlingVideo;
+    var videoVolume = 1.0;
+
+    /* Mostrar controles certos */
+    if (hasKlingVideo) {
+        animatedControls.style.display = 'none';
+        realVideoControls.style.display = 'flex';
+    }
+    var elapsed = 0;
+    var totalDuration = 30;
+    var progressTimer = null;
+    var sceneTimer = null;
+    var currentScene = -1;
+    var synth = window.speechSynthesis;
+    var nextVideoTimer = null;
+    var audioCtx = null;
+    var musicNodes = {};
+
+    /* === CENAS DO VIDEO === */
+    var emojis = [emoji, '🤖', '💡', '🧠', '🚀', '✨', '🔥', '🌟', '📚', '🎯', '⚡', '🎬', '🔬', '🎨'];
+    var frases = descricao.split(/[.!?]+/).filter(function(f) { return f.trim().length > 5; });
+    if (frases.length < 2) {
+        frases = [titulo];
+        frases.push('Este conteudo foi gerado por inteligencia artificial');
+        frases.push('Usando modelos Ollama rodando localmente');
+        frases.push('Imagens geradas por Pollinations AI gratuitamente');
+        frases.push('Cada IA cria conteudo original de forma autonoma');
+        frases.push('Obrigado por assistir!');
+    }
+
+    var scenes = [];
+    for (var i = 0; i < frases.length; i++) {
+        scenes.push({
+            emoji: emojis[i % emojis.length],
+            text: frases[i].trim()
+        });
+    }
+    scenes.push({ emoji: emoji, text: 'Obrigado por assistir! Inscreva-se no canal!' });
+
+    totalDuration = Math.max(scenes.length * 6, 25);
+    var durMin = Math.floor(totalDuration / 60);
+    var durSec = totalDuration % 60;
+    var durStr = durMin + ':' + (durSec < 10 ? '0' : '') + durSec;
+
+    /* ========================================
+       POLLINATIONS.AI - Gerador de imagens GRATIS
+       (sem API key, sem limites)
+       ======================================== */
+    var imageCache = {};
+    var imagePreloaded = {};
+
+    function getPollinationsUrl(text, seed) {
+        var prompt = encodeURIComponent(
+            text + ', digital art, cinematic lighting, 4k, detailed, vibrant colors'
+        );
+        var s = seed || Math.floor(Math.random() * 999999);
+        return 'https://image.pollinations.ai/prompt/' + prompt + '?width=1280&height=720&seed=' + s + '&nologo=true';
+    }
+
+    function preloadImage(idx) {
+        if (idx >= scenes.length || imagePreloaded[idx]) return;
+        imagePreloaded[idx] = true;
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        var url = getPollinationsUrl(scenes[idx].text, idx * 1000 + 42);
+        img.onload = function() {
+            imageCache[idx] = url;
+            var div = document.createElement('div');
+            div.className = 'scene-bg';
+            div.id = 'sceneBg' + idx;
+            div.style.backgroundImage = 'url(' + url + ')';
+            div.innerHTML = '<div class="scene-bg-overlay"></div>';
+            bgContainer.appendChild(div);
+        };
+        img.onerror = function() {
+            imageCache[idx] = null;
+        };
+        img.src = url;
+    }
+
+    function preloadAllImages() {
+        for (var i = 0; i < Math.min(3, scenes.length); i++) {
+            preloadImage(i);
+        }
+        for (var j = 3; j < scenes.length; j++) {
+            (function(idx) {
+                setTimeout(function() { preloadImage(idx); }, idx * 2000);
+            })(j);
+        }
+    }
+
+    function showSceneBg(idx) {
+        var allBgs = bgContainer.querySelectorAll('.scene-bg');
+        for (var i = 0; i < allBgs.length; i++) {
+            allBgs[i].classList.remove('active');
+        }
+        var bg = document.getElementById('sceneBg' + idx);
+        if (bg) {
+            bg.classList.add('active');
+            imgLoading.classList.remove('show');
+        } else if (!imageCache[idx] && imagePreloaded[idx]) {
+            imgLoading.classList.add('show');
+        } else if (!imagePreloaded[idx]) {
+            preloadImage(idx);
+            imgLoading.classList.add('show');
+        }
+    }
+
+    /* ========================================
+       WEB AUDIO API - Musica ambiente GRATIS
+       ======================================== */
+    function initAudio() {
+        if (audioCtx) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+            console.log('Web Audio not supported');
+            return;
+        }
+    }
+
+    function startMusic() {
+        if (!audioCtx || !musicEnabled) return;
+        stopMusic();
+
+        /* Pad ambient (acorde suave) */
+        var notas = [130.81, 164.81, 196.00, 261.63]; /* C3, E3, G3, C4 */
+        var gainMaster = audioCtx.createGain();
+        gainMaster.gain.value = 0.06;
+        gainMaster.connect(audioCtx.destination);
+        musicNodes.gain = gainMaster;
+        musicNodes.oscs = [];
+
+        for (var i = 0; i < notas.length; i++) {
+            var osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = notas[i];
+
+            var oscGain = audioCtx.createGain();
+            oscGain.gain.value = 0.3;
+
+            /* LFO para tremolo suave */
+            var lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.3 + i * 0.1;
+            var lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 0.15;
+            lfo.connect(lfoGain);
+            lfoGain.connect(oscGain.gain);
+            lfo.start();
+
+            osc.connect(oscGain);
+            oscGain.connect(gainMaster);
+            osc.start();
+            musicNodes.oscs.push(osc);
+            musicNodes.oscs.push(lfo);
+        }
+
+        /* Sub bass pulse */
+        var bass = audioCtx.createOscillator();
+        bass.type = 'sine';
+        bass.frequency.value = 65.41; /* C2 */
+        var bassGain = audioCtx.createGain();
+        bassGain.gain.value = 0.08;
+        var bassLfo = audioCtx.createOscillator();
+        bassLfo.type = 'sine';
+        bassLfo.frequency.value = 0.5;
+        var bassLfoGain = audioCtx.createGain();
+        bassLfoGain.gain.value = 0.06;
+        bassLfo.connect(bassLfoGain);
+        bassLfoGain.connect(bassGain.gain);
+        bassLfo.start();
+        bass.connect(bassGain);
+        bassGain.connect(gainMaster);
+        bass.start();
+        musicNodes.oscs.push(bass);
+        musicNodes.oscs.push(bassLfo);
+    }
+
+    function stopMusic() {
+        if (musicNodes.oscs) {
+            for (var i = 0; i < musicNodes.oscs.length; i++) {
+                try { musicNodes.oscs[i].stop(); } catch(e) {}
+            }
+        }
+        musicNodes = {};
+    }
+
+    /* === PARTICULAS === */
+    function createParticles() {
+        particlesEl.innerHTML = '';
+        for (var i = 0; i < 15; i++) {
+            var p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (3 + Math.random() * 4) + 's';
+            p.style.animationDelay = Math.random() * 3 + 's';
+            p.style.width = (2 + Math.random() * 4) + 'px';
+            p.style.height = p.style.width;
+            particlesEl.appendChild(p);
+        }
+    }
+
+    /* === CENAS === */
+    function buildScenes() {
+        scenesContainer.innerHTML = '';
+        for (var i = 0; i < scenes.length; i++) {
+            var div = document.createElement('div');
+            div.className = 'scene';
+            div.id = 'scene' + i;
+            div.innerHTML = '<div class="scene-emoji">' + scenes[i].emoji + '</div>' +
+                '<div class="scene-text">' + scenes[i].text + '</div>';
+            scenesContainer.appendChild(div);
+        }
+    }
+
+    function showScene(idx) {
+        if (idx < 0 || idx >= scenes.length) return;
+
+        if (!hasKlingVideo) {
+            /* Video animado - mostrar emojis, cenas, imagens */
+            var prev = document.querySelector('.scene.active');
+            if (prev) prev.classList.remove('active');
+            var s = document.getElementById('scene' + idx);
+            if (s) {
+                s.classList.add('active');
+                var txt = s.querySelector('.scene-text');
+                if (txt) {
+                    txt.style.animation = 'none';
+                    txt.offsetHeight;
+                    txt.style.animation = '';
+                }
+            }
+            showSceneBg(idx);
+            if (idx + 1 < scenes.length) preloadImage(idx + 1);
+        }
+
+        currentScene = idx;
+
+        /* Legenda - so mostra se subtitlesEnabled */
+        if (subtitlesEnabled) {
+            if (hasKlingVideo) {
+                subtitleBarReal.textContent = scenes[idx].text;
+                subtitleBarReal.style.display = 'block';
+            } else {
+                subtitleBar.textContent = scenes[idx].text;
+                subtitleBar.classList.add('active');
+            }
+        } else {
+            if (hasKlingVideo) {
+                subtitleBarReal.style.display = 'none';
+            } else {
+                subtitleBar.classList.remove('active');
+        if (subtitleBarReal) subtitleBarReal.style.display = 'none';
+            }
+        }
+
+        /* Falar - so se voiceEnabled */
+        if (voiceEnabled && synth) {
+            synth.cancel();
+            var utter = new SpeechSynthesisUtterance(scenes[idx].text);
+            utter.lang = 'pt-BR';
+            utter.rate = 1.0;
+            utter.pitch = 1.0;
+            var voices = synth.getVoices();
+            for (var v = 0; v < voices.length; v++) {
+                if (voices[v].lang.indexOf('pt') !== -1) {
+                    utter.voice = voices[v];
+                    break;
+                }
+            }
+            synth.speak(utter);
+        }
+    }
+
+    function nextScene() {
+        if (isPaused) return;
+        if (currentScene + 1 < scenes.length) {
+            showScene(currentScene + 1);
+            sceneTimer = setTimeout(nextScene, (totalDuration / scenes.length) * 1000);
+        }
+    }
+
+    /* === CONTROLE DO PLAYER === */
+    function startVideo() {
+        playerIdle.classList.add('hidden');
+        playerEnded.classList.remove('active');
+        isPlaying = true;
+        isPaused = false;
+        elapsed = 0;
+        currentScene = -1;
+        playPauseBtn.innerHTML = '&#9646;&#9646;';
+
+        if (hasKlingVideo) {
+            /* === VIDEO REAL - player limpo igual YouTube === */
+            playerScreen.style.display = 'none';
+
+            klingVideoEl.style.opacity = '1';
+            klingVideoEl.volume = videoVolume;
+            klingVideoEl.muted = false;
+            klingVideoEl.currentTime = 0;
+            klingVideoEl.play().catch(function() {
+                /* Browser bloqueia autoplay com som - comecar muted */
+                klingVideoEl.muted = true;
+                klingVideoEl.play();
+                if (muteBtn) muteBtn.innerHTML = '&#128263;';
+            });
+            if (klingBadge) klingBadge.style.display = 'block';
+
+            /* Duracao real do video */
+            var updateDur = function() {
+                if (klingVideoEl.duration && isFinite(klingVideoEl.duration)) {
+                    totalDuration = klingVideoEl.duration;
+                    var dm = Math.floor(totalDuration / 60);
+                    var ds = Math.floor(totalDuration % 60);
+                    durStr = dm + ':' + (ds < 10 ? '0' : '') + ds;
+                }
+            };
+            updateDur();
+            klingVideoEl.addEventListener('loadedmetadata', updateDur);
+
+            /* Construir cenas para legendas opcionais */
+            buildScenes();
+            if (subtitlesEnabled) {
+                showScene(0);
+                sceneTimer = setTimeout(nextScene, (totalDuration / scenes.length) * 1000);
+            }
+        } else {
+            /* === VIDEO ANIMADO === */
+            playerScreen.style.display = '';
+            playerScreen.classList.add('active');
+            scenesContainer.style.display = '';
+            particlesEl.style.display = '';
+            bgContainer.style.display = '';
+            imgLoading.style.display = '';
+
+            createParticles();
+            buildScenes();
+            initAudio();
+            startMusic();
+            preloadAllImages();
+            showScene(0);
+            sceneTimer = setTimeout(nextScene, (totalDuration / scenes.length) * 1000);
+        }
+
+        startProgress();
+        if (nextVideoTimer) { clearTimeout(nextVideoTimer); nextVideoTimer = null; }
+    }
+
+    function formatTime(sec) {
+        var m = Math.floor(sec / 60);
+        var s = Math.floor(sec % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function startProgress() {
+        if (progressTimer) clearInterval(progressTimer);
+        progressTimer = setInterval(function() {
+            if (isPaused) return;
+            if (hasKlingVideo && klingVideoEl) {
+                elapsed = klingVideoEl.currentTime || 0;
+                if (klingVideoEl.duration && isFinite(klingVideoEl.duration)) {
+                    totalDuration = klingVideoEl.duration;
+                    durStr = formatTime(totalDuration);
+                }
+            } else {
+                elapsed += 0.3;
+            }
+            var pct = Math.min((elapsed / totalDuration) * 100, 100);
+            progressBar.style.width = pct + '%';
+            timeDisplay.textContent = formatTime(elapsed) + ' / ' + durStr;
+            if (!hasKlingVideo && pct >= 100) endVideo();
+        }, 300);
+    }
+
+    function endVideo() {
+        isPlaying = false;
+        isPaused = false;
+        clearInterval(progressTimer);
+        clearTimeout(sceneTimer);
+        if (synth) synth.cancel();
+        stopMusic();
+        if (hasKlingVideo) { klingVideoEl.pause(); klingVideoEl.style.opacity = '0'; if (klingBadge) klingBadge.style.display = 'none'; }
+        subtitleBar.classList.remove('active');
+        if (subtitleBarReal) subtitleBarReal.style.display = 'none';
+        playerEnded.classList.add('active');
+        playPauseBtn.innerHTML = '&#9654;';
+        var sideLinks = document.querySelectorAll('.side-video');
+        if (sideLinks.length > 0) {
+            var nextLink = sideLinks[0].parentElement;
+            if (nextLink && nextLink.href) {
+                nextVideoTimer = setTimeout(function() {
+                    window.location.href = nextLink.href;
+                }, 10000);
+            }
+        }
+    }
+
+    function togglePause() {
+        if (!isPlaying) return;
+        isPaused = !isPaused;
+        if (isPaused) {
+            playPauseBtn.innerHTML = '&#9654;';
+            if (synth) synth.pause();
+            if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+            if (hasKlingVideo) klingVideoEl.pause();
+        } else {
+            playPauseBtn.innerHTML = '&#9646;&#9646;';
+            if (synth) synth.resume();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            if (hasKlingVideo) klingVideoEl.play();
+            nextScene();
+        }
+    }
+
+    /* === EVENT LISTENERS === */
+    bigPlayBtn.addEventListener('click', function(e) { e.stopPropagation(); startVideo(); });
+    replayBtn.addEventListener('click', function(e) { e.stopPropagation(); startVideo(); });
+
+    playPauseBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!isPlaying) startVideo();
+        else togglePause();
+    });
+
+    document.getElementById('player').addEventListener('click', function() {
+        if (!isPlaying && !playerIdle.classList.contains('hidden')) startVideo();
+        else if (isPlaying) togglePause();
+        else if (playerEnded.classList.contains('active')) startVideo();
+    });
+
+    voiceBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        voiceEnabled = !voiceEnabled;
+        if (!voiceEnabled) {
+            voiceBtn.innerHTML = '&#128263;';
+            volLabel.textContent = 'Voz OFF';
+            if (synth) synth.cancel();
+        } else {
+            voiceBtn.innerHTML = '&#128264;';
+            volLabel.textContent = 'Voz ON';
+        }
+    });
+
+    musicBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        musicEnabled = !musicEnabled;
+        if (!musicEnabled) {
+            musicBtn.innerHTML = '&#128263;';
+            musicLabel.textContent = 'Music OFF';
+            stopMusic();
+        } else {
+            musicBtn.innerHTML = '&#127925;';
+            musicLabel.textContent = 'Music ON';
+            if (isPlaying && !isPaused) startMusic();
+        }
+    });
+
+    document.getElementById('likeBtn').addEventListener('click', function() {
+        this.classList.toggle('liked');
+        this.innerHTML = this.classList.contains('liked') ? '&#128077; Liked!' : '&#128077; Like';
+    });
+
+    document.getElementById('subBtn').addEventListener('click', function() {
+        if (this.textContent === 'INSCREVER-SE') {
+            this.textContent = 'INSCRITO';
+            this.style.background = '#333';
+        } else {
+            this.textContent = 'INSCREVER-SE';
+            this.style.background = '#cc0000';
+        }
+    });
+
+    /* Video real - evento ended */
+    if (hasKlingVideo) {
+        klingVideoEl.addEventListener('ended', function() {
+            endVideo();
+        });
+    }
+
+    /* === VOLUME CONTROL (video real) === */
+    if (muteBtn) {
+        muteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!hasKlingVideo) return;
+            klingVideoEl.muted = !klingVideoEl.muted;
+            muteBtn.innerHTML = klingVideoEl.muted ? '&#128263;' : '&#128266;';
+            if (!klingVideoEl.muted) {
+                klingVideoEl.volume = videoVolume;
+                volSlider.value = videoVolume * 100;
+            }
+        });
+    }
+    if (volSlider) {
+        volSlider.addEventListener('input', function(e) {
+            e.stopPropagation();
+            if (!hasKlingVideo) return;
+            videoVolume = this.value / 100;
+            klingVideoEl.volume = videoVolume;
+            klingVideoEl.muted = (videoVolume === 0);
+            muteBtn.innerHTML = (videoVolume === 0 || klingVideoEl.muted) ? '&#128263;' : '&#128266;';
+        });
+        volSlider.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
+    /* === FULLSCREEN === */
+    fullscreenBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleFullscreen();
+    });
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            playerEl.requestFullscreen().catch(function() {
+                /* fallback CSS fullscreen */
+                playerEl.classList.toggle('fullscreen');
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    document.addEventListener('fullscreenchange', function() {
+        fullscreenBtn.innerHTML = document.fullscreenElement ? '&#10006;' : '&#9974;';
+    });
+
+    /* === SEEKABLE PROGRESS BAR === */
+    progressWrapper.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var rect = progressWrapper.getBoundingClientRect();
+        var pct = (e.clientX - rect.left) / rect.width;
+        pct = Math.max(0, Math.min(1, pct));
+        if (hasKlingVideo && klingVideoEl && klingVideoEl.duration) {
+            klingVideoEl.currentTime = pct * klingVideoEl.duration;
+            elapsed = klingVideoEl.currentTime;
+        } else {
+            elapsed = pct * totalDuration;
+        }
+        progressBar.style.width = (pct * 100) + '%';
+        timeDisplay.textContent = formatTime(elapsed) + ' / ' + durStr;
+    });
+    progressWrapper.addEventListener('mousemove', function(e) {
+        var rect = progressWrapper.getBoundingClientRect();
+        var pct = (e.clientX - rect.left) / rect.width;
+        pct = Math.max(0, Math.min(1, pct));
+        var hoverTime = pct * totalDuration;
+        progressHover.textContent = formatTime(hoverTime);
+        progressHover.style.left = (e.clientX - rect.left - 18) + 'px';
+        progressHover.style.display = 'block';
+    });
+    progressWrapper.addEventListener('mouseleave', function() {
+        progressHover.style.display = 'none';
+    });
+
+    /* === KEYBOARD SHORTCUTS (igual YouTube) === */
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        switch(e.key.toLowerCase()) {
+            case ' ':
+            case 'k':
+                e.preventDefault();
+                if (!isPlaying) startVideo();
+                else togglePause();
+                break;
+            case 'f':
+                e.preventDefault();
+                toggleFullscreen();
+                break;
+            case 'm':
+                e.preventDefault();
+                if (hasKlingVideo) {
+                    klingVideoEl.muted = !klingVideoEl.muted;
+                    muteBtn.innerHTML = klingVideoEl.muted ? '&#128263;' : '&#128266;';
+                }
+                break;
+            case 'c':
+                e.preventDefault();
+                subToggleBtn.click();
+                break;
+            case 'arrowleft':
+                e.preventDefault();
+                if (hasKlingVideo && klingVideoEl) {
+                    klingVideoEl.currentTime = Math.max(0, klingVideoEl.currentTime - 5);
+                }
+                break;
+            case 'arrowright':
+                e.preventDefault();
+                if (hasKlingVideo && klingVideoEl) {
+                    klingVideoEl.currentTime = Math.min(klingVideoEl.duration || 0, klingVideoEl.currentTime + 5);
+                }
+                break;
+            case 'arrowup':
+                e.preventDefault();
+                if (hasKlingVideo) {
+                    videoVolume = Math.min(1, videoVolume + 0.1);
+                    klingVideoEl.volume = videoVolume;
+                    volSlider.value = videoVolume * 100;
+                }
+                break;
+            case 'arrowdown':
+                e.preventDefault();
+                if (hasKlingVideo) {
+                    videoVolume = Math.max(0, videoVolume - 0.1);
+                    klingVideoEl.volume = videoVolume;
+                    volSlider.value = videoVolume * 100;
+                }
+                break;
+        }
+    });
+
+    /* Toggle legendas (CC) */
+    subToggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        subtitlesEnabled = !subtitlesEnabled;
+        if (subtitlesEnabled) {
+            subToggleBtn.classList.add('active');
+            if (isPlaying && currentScene < 0) {
+                showScene(0);
+                sceneTimer = setTimeout(nextScene, (totalDuration / scenes.length) * 1000);
+            } else if (isPlaying && currentScene >= 0) {
+                if (hasKlingVideo) {
+                    subtitleBarReal.textContent = scenes[currentScene].text;
+                    subtitleBarReal.style.display = 'block';
+                } else {
+                    subtitleBar.textContent = scenes[currentScene].text;
+                    subtitleBar.classList.add('active');
+                }
+            }
+        } else {
+            subToggleBtn.classList.remove('active');
+            if (hasKlingVideo) {
+                subtitleBarReal.style.display = 'none';
+            } else {
+                subtitleBar.classList.remove('active');
+        if (subtitleBarReal) subtitleBarReal.style.display = 'none';
+            }
+            if (synth) synth.cancel();
+        }
+    });
+
+    /* Carregar vozes */
+    if (synth && synth.onvoiceschanged !== undefined) {
+        synth.onvoiceschanged = function() {};
+    }
+})();
+</script>
+{% endraw %}
+</body>
+</html>

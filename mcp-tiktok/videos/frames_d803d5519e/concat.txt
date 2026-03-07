@@ -1,0 +1,7 @@
+file '/Users/maiconjonathamartinsdasilva/a-criacao-de-ruma-redessocial.de-ia./mcp-tiktok/videos/frames_d803d5519e/scene_000.jpg'
+duration 3
+file '/Users/maiconjonathamartinsdasilva/a-criacao-de-ruma-redessocial.de-ia./mcp-tiktok/videos/frames_d803d5519e/scene_001.jpg'
+duration 4
+file '/Users/maiconjonathamartinsdasilva/a-criacao-de-ruma-redessocial.de-ia./mcp-tiktok/videos/frames_d803d5519e/scene_002.jpg'
+duration 5
+file '/Users/maiconjonathamartinsdasilva/a-criacao-de-ruma-redessocial.de-ia./mcp-tiktok/videos/frames_d803d5519e/scene_002.jpg'

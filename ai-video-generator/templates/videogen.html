@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+        
+        .header {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 20px rgba(37,117,252,0.3);
+        }
+        .header h1 { font-size: 22px; color: white; }
+        .header .badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 12px; }
+        
+        .generator {
+            max-width: 800px; margin: 20px auto; padding: 0 15px;
+        }
+        .gen-card {
+            background: #12122a; border-radius: 16px; padding: 25px;
+            border: 1px solid #1e1e4a; margin-bottom: 20px;
+        }
+        .gen-card h2 { font-size: 18px; margin-bottom: 15px; color: #8b5cf6; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; }
+        .input-group input, .input-group textarea {
+            width: 100%; padding: 12px 15px; background: #1a1a3a; border: 1px solid #2a2a5a;
+            border-radius: 10px; color: white; font-size: 15px; outline: none;
+            transition: border 0.2s;
+        }
+        .input-group input:focus, .input-group textarea:focus { border-color: #6a11cb; }
+        .input-group textarea { resize: vertical; min-height: 80px; }
+        
+        .templates-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px; margin-bottom: 15px;
+        }
+        .tpl-card {
+            background: #1a1a3a; border: 2px solid #2a2a5a; border-radius: 12px;
+            padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;
+        }
+        .tpl-card:hover { border-color: #6a11cb; transform: translateY(-2px); }
+        .tpl-card.active { border-color: #8b5cf6; background: #251a4a; }
+        .tpl-card .icon { font-size: 28px; margin-bottom: 5px; }
+        .tpl-card .name { font-size: 13px; font-weight: 600; }
+        .tpl-card .desc { font-size: 10px; color: #888; }
+        
+        .btn-generate {
+            width: 100%; padding: 14px; background: linear-gradient(135deg, #6a11cb, #2575fc);
+            border: none; border-radius: 12px; color: white; font-size: 16px;
+            font-weight: bold; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(106,17,203,0.4); }
+        .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .progress {
+            display: none; text-align: center; padding: 30px;
+            background: #12122a; border-radius: 16px; margin-bottom: 20px;
+            border: 1px solid #1e1e4a;
+        }
+        .progress.active { display: block; }
+        .progress-spinner {
+            width: 60px; height: 60px; border: 4px solid #1e1e4a;
+            border-top: 4px solid #8b5cf6; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-text { font-size: 14px; color: #aaa; }
+        .progress-step { color: #8b5cf6; font-weight: bold; margin-top: 5px; }
+        
+        .videos-section { max-width: 1200px; margin: 0 auto; padding: 0 15px 40px; }
+        .section-title { font-size: 18px; margin-bottom: 15px; padding-left: 5px; }
+        
+        .video-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .video-card {
+            background: #12122a; border-radius: 16px; overflow: hidden;
+            border: 1px solid #1e1e4a; transition: transform 0.2s;
+        }
+        .video-card:hover { transform: translateY(-3px); box-shadow: 0 5px 25px rgba(0,0,0,0.3); }
+        
+        .video-player {
+            aspect-ratio: 9/16; max-height: 450px; background: #000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .video-player video { width: 100%; height: 100%; object-fit: contain; }
+        
+        .video-info { padding: 12px; }
+        .video-info h3 { font-size: 15px; margin-bottom: 5px; }
+        .video-info .meta { font-size: 12px; color: #888; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .video-info .tags { font-size: 11px; color: #5dade2; }
+        .video-info .desc { font-size: 12px; color: #aaa; margin-top: 5px; }
+        .video-info .stats { font-size: 11px; color: #666; margin-top: 5px; }
+        
+        .video-actions { padding: 8px 12px; display: flex; gap: 8px; border-top: 1px solid #1e1e4a; }
+        .video-actions a, .video-actions button {
+            flex: 1; padding: 8px; text-align: center; border-radius: 8px;
+            font-size: 12px; font-weight: bold; cursor: pointer; border: none; text-decoration: none;
+        }
+        .btn-dl { background: #6a11cb; color: white; }
+        .btn-dl:hover { background: #7c3aed; }
+        .btn-del { background: #1a1a3a; color: #e74c3c; border: 1px solid #333 !important; }
+        .btn-del:hover { background: #2a1a1a; }
+        
+        .empty { text-align: center; padding: 50px; color: #555; }
+        .empty .icon { font-size: 50px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 AI Video Generator</h1>
+        <span class="badge">Ken Burns + AI</span>
+    </div>
+    
+    <div class="generator">
+        <div class="gen-card">
+            <h2>Criar Novo Video</h2>
+            <div class="input-group">
+                <label>Tema / Prompt do Video</label>
+                <textarea id="tema" placeholder="Ex: 5 curiosidades sobre o universo, Dicas para ganhar dinheiro online, O futuro da inteligencia artificial..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>Template</label>
+                <div class="templates-grid" id="templates"></div>
+            </div>
+            <button class="btn-generate" id="btnGen" onclick="gerar()">🎬 Gerar Video com IA</button>
+        </div>
+        
+        <div class="progress" id="progress">
+            <div class="progress-spinner"></div>
+            <div class="progress-text">Gerando video com IA...</div>
+            <div class="progress-step" id="progressStep">Criando roteiro...</div>
+        </div>
+    </div>
+    
+    <div class="videos-section">
+        <h2 class="section-title">Videos Gerados (<span id="count">0</span>)</h2>
+        <div class="video-grid" id="videoGrid"></div>
+        <div class="empty" id="empty">
+            <div class="icon">🎬</div>
+            <p>Nenhum video gerado ainda</p>
+        </div>
+    </div>
+
+    <script>
+        var selectedTemplate = 'livre';
+        
+        async function loadTemplates() {
+            var r = await fetch('/api/templates');
+            var d = await r.json();
+            var html = '';
+            (d.templates || []).forEach(function(t) {
+                var cls = t.id === selectedTemplate ? 'tpl-card active' : 'tpl-card';
+                html += '<div class="' + cls + '" onclick="selectTpl(\'' + t.id + '\', this)">';
+                html += '<div class="icon">' + t.icon + '</div>';
+                html += '<div class="name">' + t.nome + '</div>';
+                html += '<div class="desc">' + t.desc + '</div>';
+                html += '</div>';
+            });
+            document.getElementById('templates').innerHTML = html;
+        }
+        
+        function selectTpl(id, el) {
+            selectedTemplate = id;
+            document.querySelectorAll('.tpl-card').forEach(function(c) { c.classList.remove('active'); });
+            el.classList.add('active');
+        }
+        
+        async function gerar() {
+            var tema = document.getElementById('tema').value.trim();
+            if (!tema) { alert('Digite um tema!'); return; }
+            
+            var btn = document.getElementById('btnGen');
+            btn.disabled = true;
+            document.getElementById('progress').classList.add('active');
+            
+            var steps = ['Criando roteiro com IA...', 'Gerando imagens...', 'Aplicando Ken Burns...', 'Finalizando video...'];
+            var stepIdx = 0;
+            var stepTimer = setInterval(function() {
+                stepIdx = (stepIdx + 1) % steps.length;
+                document.getElementById('progressStep').textContent = steps[stepIdx];
+            }, 15000);
+            
+            try {
+                var r = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({tema: tema, template: selectedTemplate})
+                });
+                var data = await r.json();
+                if (data.success) {
+                    loadVideos();
+                } else {
+                    alert('Erro ao gerar video');
+                }
+            } catch(e) {
+                alert('Erro: ' + e);
+            }
+            
+            clearInterval(stepTimer);
+            btn.disabled = false;
+            document.getElementById('progress').classList.remove('active');
+        }
+        
+        async function loadVideos() {
+            var r = await fetch('/api/videos');
+            var d = await r.json();
+            var vids = d.videos || [];
+            document.getElementById('count').textContent = vids.length;
+            document.getElementById('empty').style.display = vids.length ? 'none' : 'block';
+            
+            var html = '';
+            vids.forEach(function(v) {
+                html += '<div class="video-card">';
+                if (v.video_url) {
+                    html += '<div class="video-player">';
+                    html += '<video src="' + v.video_url + '" controls preload="metadata" loop playsinline></video>';
+                    html += '</div>';
+                }
+                html += '<div class="video-info">';
+                html += '<h3>' + (v.titulo || v.tema) + '</h3>';
+                html += '<div class="meta"><span>' + (v.template_nome || '') + '</span><span>' + (v.elapsed || 0) + 's</span></div>';
+                html += '<div class="tags">' + (v.hashtags || '') + '</div>';
+                if (v.descricao) html += '<div class="desc">' + v.descricao + '</div>';
+                html += '<div class="stats">' + (v.cenas || 0) + ' cenas | ' + (v.images_generated || 0) + ' imagens | ' + (v.file_size_kb || 0) + 'KB</div>';
+                html += '</div>';
+                html += '<div class="video-actions">';
+                if (v.video_url) html += '<a class="btn-dl" href="' + v.video_url + '" download>⬇️ Download</a>';
+                html += '<button class="btn-del" onclick="delVideo(\'' + v.id + '\')">🗑️ Deletar</button>';
+                html += '</div>';
+                html += '</div>';
+            });
+            document.getElementById('videoGrid').innerHTML = html;
+        }
+        
+        async function delVideo(id) {
+            if (!confirm('Deletar este video?')) return;
+            await fetch('/api/videos/' + id, {method: 'DELETE'});
+            loadVideos();
+        }
+        
+        loadTemplates();
+        loadVideos();
+        setInterval(loadVideos, 30000);
+    </script>
+</body>
+</html>

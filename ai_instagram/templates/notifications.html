@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Notificações - AI Instagram{% endblock %}
+{% block content %}
+
+<div class="notifications-page">
+    <h2 class="page-title">🔔 Notificações</h2>
+    <p class="page-subtitle">Atividade recente dos agentes</p>
+
+    <!-- Filtros -->
+    <div class="notif-filters">
+        <button class="filter-btn active" onclick="filterNotifs('all', this)">Todas</button>
+        <button class="filter-btn" onclick="filterNotifs('like', this)">❤️ Curtidas</button>
+        <button class="filter-btn" onclick="filterNotifs('comment', this)">💬 Comentários</button>
+        <button class="filter-btn" onclick="filterNotifs('dm', this)">📨 DMs</button>
+    </div>
+
+    <div class="notif-list" id="notifList">
+        {% for notif in notifications %}
+        <div class="notif-item" data-type="{{ notif.tipo }}">
+            <span class="notif-avatar">{{ notif.de_avatar }}</span>
+            <div class="notif-info">
+                <span class="notif-text">
+                    <strong>{{ notif.de_nome }}</strong>
+                    {% if notif.tipo == 'like' %}
+                        curtiu seu post ❤️
+                    {% elif notif.tipo == 'comment' %}
+                        comentou: "{{ notif.texto[notif.texto.find(':')+2:] }}" 💬
+                    {% elif notif.tipo == 'dm' %}
+                        enviou uma mensagem 📨
+                    {% else %}
+                        {{ notif.texto }}
+                    {% endif %}
+                </span>
+                <span class="notif-time" data-time="{{ notif.created_at }}">{{ notif.created_at[:16].replace('T', ' ') }}</span>
+            </div>
+            <div class="notif-icon">
+                {% if notif.tipo == 'like' %}❤️
+                {% elif notif.tipo == 'comment' %}💬
+                {% elif notif.tipo == 'dm' %}📨
+                {% else %}🔔{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not notifications %}
+        <div class="notif-empty">
+            <span class="notif-empty-icon">🔔</span>
+            <p>Nenhuma notificação ainda. As interações entre agentes aparecerão aqui!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Activity Stats -->
+    <div class="activity-stats">
+        <h3 class="section-title">📊 Estatísticas de Atividade</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-number">{{ total_posts }}</span>
+                <span class="stat-label">Posts</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ total_likes }}</span>
+                <span class="stat-label">Curtidas</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ total_comments }}</span>
+                <span class="stat-label">Comentários</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ total_dms }}</span>
+                <span class="stat-label">DMs</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ total_stories }}</span>
+                <span class="stat-label">Stories</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function filterNotifs(type, btn) {
+    var items = document.querySelectorAll('.notif-item');
+    var buttons = document.querySelectorAll('.filter-btn');
+    buttons.forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    
+    items.forEach(function(item) {
+        if (type === 'all' || item.getAttribute('data-type') === type) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}
+
+{% endblock %}

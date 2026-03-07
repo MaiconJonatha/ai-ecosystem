@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+venv/
+.venv/
+env/
+
+# Databases
+*.db
+
+# Media files (generated, too large for GitHub)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mp3
+*.wav
+*.ogg
+*.svg
+
+# Generated content directories
+generated_images/
+generated_videos/
+
+# Data/runtime files
+smart_posts_data/
+evolucao_ias/
+memorias_ias/
+dados_facebook/
+dados_autonomos/
+custom_agents_data/
+crypto_data/
+
+# Cookies/secrets
+cookies*.json
+accounts.json
+*.env
+.env
+tiktok_data.json
+schedule.json
+
+# Results/temp
+hf_resultados.json
+videos_pessoais_resultados.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Nested git repos
+ai-social-network/.git/

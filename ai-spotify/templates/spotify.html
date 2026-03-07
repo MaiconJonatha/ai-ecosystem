@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Spotify - Música por IAs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Circular', -apple-system, sans-serif; background: #121212; color: #fff; min-height: 100vh; }
+        .container { display: flex; min-height: 100vh; }
+        .sidebar { width: 240px; background: #000; padding: 24px; }
+        .sidebar h1 { color: #1DB954; font-size: 24px; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .nav-item { padding: 12px 0; color: #b3b3b3; cursor: pointer; display: flex; align-items: center; gap: 15px; }
+        .nav-item:hover { color: #fff; }
+        .nav-item.highlight-nav { color: #1DB954; font-weight: 600; }
+        .nav-item.highlight-nav:hover { color: #1ed760; }
+        .main { flex: 1; padding: 24px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h2 { font-size: 28px; }
+        .generate-btn { background: #1DB954; color: #000; border: none; padding: 12px 32px; border-radius: 30px; font-weight: bold; cursor: pointer; }
+        .generate-btn:hover { transform: scale(1.05); }
+        .artists-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; margin-bottom: 40px; }
+        .artist-card { background: #181818; padding: 16px; border-radius: 8px; text-align: center; cursor: pointer; transition: background 0.3s; }
+        .artist-card:hover { background: #282828; }
+        .artist-avatar { width: 120px; height: 120px; border-radius: 50%; background: #1DB954; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 50px; }
+        .artist-name { font-weight: bold; margin-bottom: 4px; }
+        .artist-genre { color: #b3b3b3; font-size: 14px; }
+        .section-subtitle { color: #888; font-size: 14px; margin: -8px 0 16px 0; }
+        .songs-section h3 { margin-bottom: 6px; font-size: 24px; }
+        .songs-section .section-subtitle { margin-bottom: 16px; }
+        .song-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+        .song-item { background: #181818; border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s, background 0.2s; border: 2px solid transparent; }
+        .song-item:hover { background: #282828; transform: scale(1.02); }
+        .song-item .song-avatar { width: 100px; height: 100px; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+        .song-item .song-info { margin-bottom: 8px; }
+        .song-item .song-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-item .song-artist { color: #b3b3b3; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-item .song-fundamental { justify-content: center; margin-top: 6px; }
+        .song-item .song-plays { display: block; color: #888; font-size: 11px; margin-top: 6px; }
+        .song-tag { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
+        .player { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 16px 24px; display: flex; align-items: center; border-top: 1px solid #282828; }
+        .now-playing { display: flex; align-items: center; width: 300px; }
+        .now-playing .avatar { width: 56px; height: 56px; border-radius: 4px; background: #1DB954; display: flex; align-items: center; justify-content: center; margin-right: 16px; font-size: 24px; }
+        .controls { flex: 1; display: flex; justify-content: center; gap: 20px; }
+        .control-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+        .control-btn.speak-btn { font-size: 14px; padding: 6px 12px; background: #333; border-radius: 20px; }
+        .control-btn.speak-btn:hover { background: #1DB954; color: #000; }
+        .player-hint { margin-left: 16px; font-size: 11px; color: #666; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #282828; padding: 32px; border-radius: 16px; max-width: 500px; width: 90%; }
+        .modal-content h3 { margin-bottom: 20px; }
+        .modal-content select, .modal-content input { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #181818; color: #fff; margin-bottom: 16px; }
+        .modal-content .btn-row { display: flex; gap: 16px; }
+        .modal-content button { flex: 1; padding: 12px; border-radius: 30px; border: none; cursor: pointer; font-weight: bold; }
+        .modal-content .cancel { background: #404040; color: #fff; }
+        .modal-content .confirm { background: #1DB954; color: #000; }
+        .lyrics-display { background: #181818; padding: 20px; border-radius: 8px; margin-top: 20px; white-space: pre-line; line-height: 1.8; }
+        .empty-songs-box { background: #181818; padding: 40px; border-radius: 12px; text-align: center; }
+        .empty-songs-text { color: #b3b3b3; font-size: 18px; margin-bottom: 8px; }
+        .empty-songs-hint { color: #888; font-size: 14px; margin-bottom: 24px; }
+        .big-generate { margin-bottom: 12px; }
+        .generate-first-btn { background: #1DB954; color: #000; border: none; padding: 14px 28px; border-radius: 30px; font-weight: bold; cursor: pointer; display: inline-block; }
+        .generate-first-btn:hover { transform: scale(1.05); }
+        body.light-theme .empty-songs-box { background: #fff; }
+        body.light-theme .empty-songs-text { color: #333; }
+        body.light-theme .empty-songs-hint { color: #666; }
+        body.light-theme { background: #f5f5f5; color: #111; }
+        body.light-theme .sidebar { background: #fff; }
+        body.light-theme .nav-item { color: #333; }
+        body.light-theme .nav-item:hover { color: #000; }
+        body.light-theme .nav-item.highlight-nav { color: #1a8f3d; }
+        body.light-theme .nav-item.highlight-nav:hover { color: #1DB954; }
+        body.light-theme .main { background: #f5f5f5; }
+        body.light-theme .section-subtitle { color: #666; }
+        body.light-theme .artist-card { background: #fff; }
+        body.light-theme .song-list { background: transparent; }
+        body.light-theme .song-item { background: #fff; }
+        body.light-theme .artist-card:hover, body.light-theme .song-item:hover { background: #e5e5e5; }
+        body.light-theme .player { background: #fff; border-top-color: #ddd; }
+        body.light-theme .song-artist, body.light-theme .song-plays, body.light-theme .song-number { color: #666; }
+        body.light-theme .modal-content { background: #fff; }
+        body.light-theme .modal-content select, body.light-theme .modal-content input { background: #eee; color: #111; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #121212; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+        .loading-overlay.hidden { display: none; }
+        .loading-overlay .spinner { width: 48px; height: 48px; border: 4px solid #282828; border-top-color: #1DB954; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loading-overlay .msg { color: #b3b3b3; }
+        .loading-overlay.error .msg { color: #ff6b6b; max-width: 400px; text-align: center; line-height: 1.5; }
+        .loading-overlay .retry-btn { margin-top: 12px; padding: 10px 24px; background: #1DB954; color: #000; border: none; border-radius: 24px; font-weight: bold; cursor: pointer; }
+        .help-content { max-width: 520px; }
+        .help-block { background: #181818; padding: 14px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; line-height: 1.6; color: #e0e0e0; }
+        .help-block code { background: #333; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .help-block a { color: #1DB954; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="msg" id="loadingMsg">Carregando AI Spotify...</div>
+    </div>
+    <div class="container">
+        <div class="sidebar">
+            <h1>🎵 AI Spotify</h1>
+            <div class="nav-item">🏠 Início</div>
+            <div class="nav-item">🔍 Buscar</div>
+            <div class="nav-item">📚 Biblioteca</div>
+            <div class="nav-item" style="margin-top: 30px;">➕ Criar Playlist</div>
+            <div class="nav-item">❤️ Músicas Curtidas</div>
+            <div class="nav-item highlight-nav" onclick="openModal()" title="Gerar nova música com IA">🎵 Criar músicas</div>
+            <div class="nav-item" onclick="openPreferences()" title="Configurações">⚙️ Preferências</div>
+            <div class="nav-item" onclick="openHelp()" title="Como rodar e usar">❓ Como usar</div>
+            <div style="margin-top: auto; padding-top: 30px; border-top: 1px solid #282828; color: #b3b3b3; font-size: 12px;">
+                🤖 Auto-gerenciado por IAs<br>
+                via Ollama · Artistas criam músicas constantemente em segundo plano
+            </div>
+        </div>
+        <div class="main">
+            <div class="header">
+                <h2>Artistas IA</h2>
+                <button class="generate-btn" onclick="openModal()">🎵 Gerar Música</button>
+            </div>
+            <p class="section-subtitle">Estes artistas criam músicas constantemente em segundo plano (com Ollama ativo). Clique em "Criar músicas" para compor agora.</p>
+            <div class="artists-grid" id="artistsGrid"></div>
+            <div class="songs-section">
+                <h3>Músicas Recentes</h3>
+                <p class="section-subtitle">Recomendações · A lista atualiza sozinha quando novas músicas forem criadas. Clique numa música para ver a letra e "Ouvir letra".</p>
+                <div class="song-list" id="songsList"></div>
+            </div>
+            <div class="lyrics-display" id="lyricsDisplay" style="display: none;"></div>
+        </div>
+    </div>
+    <div class="player">
+        <div class="now-playing">
+            <div class="avatar" id="playerAvatar">🎵</div>
+            <div>
+                <div id="playerTitle">Nenhuma música</div>
+                <div style="color: #b3b3b3; font-size: 14px;" id="playerArtist">Selecione uma música</div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="control-btn" onclick="prevSong()" title="Anterior">⏮️</button>
+            <button class="control-btn" id="playPauseBtn" style="font-size: 32px;" onclick="togglePlay()" title="Play/Pausar">▶️</button>
+            <button class="control-btn" onclick="nextSong()" title="Próxima">⏭️</button>
+            <button class="control-btn speak-btn" id="speakLyricsBtn" onclick="toggleSpeakLyrics()" title="Ouvir letra (voz do navegador)">🔊 Ouvir letra</button>
+            <span class="player-hint">Áudio demo (WAV) + letra. Use "Ouvir letra" para a voz ler a letra.</span>
+        </div>
+    </div>
+    <audio id="audioPlayer" preload="none" style="display:none"></audio>
+    <div class="modal" id="generateModal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>🎵 Gerar Nova Música com IA</h3>
+            <label style="color: #b3b3b3; font-size: 14px;">Artista IA:</label>
+            <select id="artistSelect"></select>
+            <label style="color: #b3b3b3; font-size: 14px;">Humor/Tema:</label>
+            <input type="text" id="moodInput" placeholder="feliz, triste, amor, dança...">
+            <div class="btn-row">
+                <button class="cancel" onclick="closeModal()">Cancelar</button>
+                <button class="confirm" onclick="generateSong()">Gerar 🎵</button>
+            </div>
+            <div id="generating" style="display: none; text-align: center; margin-top: 20px;">
+                <span style="font-size: 30px;">🎼</span><br>IA compondo música...
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="preferencesModal" onclick="if(event.target===this) closePreferences()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>⚙️ Preferências</h3>
+            <label style="color: #b3b3b3; font-size: 14px;">Tema:</label>
+            <select id="prefTheme">
+                <option value="dark">Escuro</option>
+                <option value="light">Claro</option>
+            </select>
+            <label style="color: #b3b3b3; font-size: 14px;">Humor padrão ao gerar música:</label>
+            <input type="text" id="prefMood" placeholder="ex: alegre, triste, amor, dança">
+            <div class="btn-row">
+                <button class="cancel" onclick="closePreferences()">Cancelar</button>
+                <button class="confirm" onclick="savePreferences()">Salvar</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="helpModal" onclick="if(event.target===this) closeHelp()">
+        <div class="modal-content help-content" onclick="event.stopPropagation()">
+            <h3>❓ Como usar o AI Spotify</h3>
+            <div class="help-block">
+                <strong>1. Como rodar o app</strong><br>
+                No terminal, na pasta <code>ai-spotify</code>:<br>
+                <code>uvicorn app.main:app --host 0.0.0.0 --port 8006</code><br>
+                Depois abra <a href="http://localhost:8006" target="_blank">http://localhost:8006</a>
+            </div>
+            <div class="help-block">
+                <strong>2. Ver artistas</strong><br>
+                Os artistas IA aparecem em cima. Eles são quem “compõem” as letras. Para gerar música, use "Criar músicas" ou "Gerar Música".
+            </div>
+            <div class="help-block">
+                <strong>3. Ouvir as músicas</strong><br>
+                O app toca um <strong>áudio demo</strong> (WAV) por música e também mostra a <strong>letra</strong>. Clique numa música na lista → a letra aparece. Aperte <strong>▶️</strong> para tocar/pausar. Use <strong>🔊 Ouvir letra</strong> para a voz do navegador ler a letra.
+            </div>
+            <div class="help-block">
+                <strong>4. Criar músicas</strong><br>
+                Clique em <strong>🎵 Criar músicas</strong> (sidebar) ou <strong>Gerar Música</strong> (topo). Escolha o artista e o humor (ex: alegre, amor). Se não tiver músicas ainda, use <strong>⚡ Gerar minha primeira música agora</strong> (1 clique). Precisa do Ollama rodando (localhost:11434) para a IA gerar.
+            </div>
+            <button class="confirm" style="margin-top: 12px;" onclick="closeHelp()">Entendi</button>
+        </div>
+    </div>
+    <script>
+        async function loadArtists() {
+            try {
+                const r = await fetch('/api/artists');
+                if (!r.ok) throw new Error('Erro ao carregar artistas');
+                const data = await r.json();
+                const grid = document.getElementById('artistsGrid');
+                const select = document.getElementById('artistSelect');
+                grid.innerHTML = '';
+                select.innerHTML = '';
+                (data.artists || []).forEach(a => {
+                    grid.innerHTML += `<div class="artist-card"><div class="artist-avatar">${escapeHtml(a.avatar || '🎵')}</div><div class="artist-name">${escapeHtml(a.name)}</div><div class="artist-genre">${escapeHtml(a.genre || '')}</div></div>`;
+                    select.innerHTML += `<option value="${escapeHtml(a.id)}">${escapeHtml((a.avatar || '') + ' ' + a.name)}</option>`;
+                });
+                return true;
+            } catch (e) {
+                document.getElementById('artistsGrid').innerHTML = '<p style="color:#b3b3b3;">Erro ao carregar artistas. Servidor pode estar parado.</p>';
+                console.error(e);
+                return false;
+            }
+        }
+        function escapeHtml(str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        function colorForMoodGenre(mood, genre) {
+            const m = (mood || '').toLowerCase();
+            const g = (genre || '').toLowerCase();
+            if (m.includes('alegre') || m.includes('feliz') || m.includes('happy')) return '#1DB954';
+            if (m.includes('triste') || m.includes('sad')) return '#1d7db9';
+            if (m.includes('amor') || m.includes('love')) return '#e91e63';
+            if (m.includes('dança') || m.includes('dance')) return '#ff9800';
+            if (m.includes('calm')) return '#9c27b0';
+            if (g.includes('electronic')) return '#9c27b0';
+            if (g.includes('pop')) return '#e91e63';
+            if (g.includes('ambient')) return '#2196f3';
+            if (g.includes('hip') || g.includes('hop')) return '#ff5722';
+            if (g.includes('acoustic')) return '#8bc34a';
+            return '#1DB954';
+        }
+        async function loadSongs() {
+            try {
+                const r = await fetch('/api/songs');
+                if (!r.ok) throw new Error('Erro ao carregar músicas');
+                const data = await r.json();
+                const list = document.getElementById('songsList');
+                list.innerHTML = '';
+                const songs = data.songs || [];
+                songListData = songs;
+                if (songs.length === 0) {
+                    list.innerHTML = '<div class="empty-songs-box">' +
+                        '<p class="empty-songs-text">Nenhuma música ainda.</p>' +
+                        '<p class="empty-songs-hint">É fácil começar:</p>' +
+                        '<button class="generate-btn big-generate" onclick="openModal()">🎵 Gerar Música (escolher tema)</button>' +
+                        '<button class="generate-first-btn" onclick="generateFirstSong()">⚡ Gerar minha primeira música agora (1 clique)</button>' +
+                        '</div>';
+                    return;
+                }
+                songs.forEach((s, i) => {
+                    const color = colorForMoodGenre(s.mood, s.genre);
+                    const genreTag = (s.genre || '').trim() ? `<span class="song-tag" style="background:${color}22;color:${color}">${escapeHtml(s.genre)}</span>` : '';
+                    const moodTag = (s.mood || '').trim() ? `<span class="song-tag" style="background:${color}22;color:${color}">${escapeHtml(s.mood)}</span>` : '';
+                    const tagsHtml = (genreTag || moodTag) ? `<div class="song-fundamental">${genreTag}${moodTag}</div>` : '';
+                    const item = document.createElement('div');
+                    item.className = 'song-item';
+                    item.style.borderColor = color;
+                    item.dataset.title = s.title || '';
+                    item.dataset.artist = s.artist || '';
+                    item.dataset.avatar = s.avatar != null ? s.avatar : '🎵';
+                    item.dataset.lyrics = s.lyrics != null ? s.lyrics : '';
+                    item.dataset.color = color;
+                    item.dataset.id = s.id || '';
+                    item.innerHTML = `<div class="song-avatar" style="background:${color}">${escapeHtml(s.avatar || '🎵')}</div>
+                    <div class="song-info"><div class="song-title">${escapeHtml(s.title)}</div><div class="song-artist">${escapeHtml(s.artist)}</div>${tagsHtml}</div>
+                    <span class="song-plays">${s.plays != null ? s.plays : 0} plays</span>`;
+                    item.addEventListener('click', function() {
+                        currentSongIndex = i;
+                        playSong(this.dataset.title, this.dataset.artist, this.dataset.avatar, this.dataset.lyrics, this.dataset.color, this.dataset.id);
+                    });
+                    list.appendChild(item);
+                });
+                return true;
+            } catch (e) {
+                document.getElementById('songsList').innerHTML = '<p style="color:#b3b3b3;">Erro ao carregar músicas. Servidor pode estar parado.</p>';
+                console.error(e);
+                return false;
+            }
+        }
+        function hideLoading(serverOk) {
+            const el = document.getElementById('loadingOverlay');
+            if (!el) return;
+            if (serverOk) {
+                el.classList.add('hidden');
+                return;
+            }
+            el.classList.add('error');
+            document.getElementById('loadingMsg').innerHTML = 'Servidor não está rodando.<br><br>Inicie o AI Spotify na pasta do projeto:<br><code style="background:#282828;padding:6px 10px;border-radius:6px;font-size:12px;display:inline-block;margin-top:8px;">uvicorn app.main:app --host 0.0.0.0 --port 8006</code>';
+            el.querySelectorAll('.retry-btn').forEach(b => b.remove());
+            const btn = document.createElement('button');
+            btn.className = 'retry-btn';
+            btn.textContent = 'Tentar de novo';
+            btn.onclick = function() { el.classList.remove('error'); document.getElementById('loadingMsg').textContent = 'Carregando AI Spotify...'; document.getElementById('loadingMsg').innerHTML = 'Carregando AI Spotify...'; btn.remove(); initPage(); };
+            el.appendChild(btn);
+        }
+        let refreshSongsInterval = null;
+        async function initPage() {
+            applyTheme();
+            const ok1 = await loadArtists();
+            const ok2 = await loadSongs();
+            hideLoading(ok1 || ok2);
+            if (songListData.length === 0 && (ok1 || ok2))
+                setTimeout(function() { openModal(); }, 1200);
+            if (refreshSongsInterval) clearInterval(refreshSongsInterval);
+            refreshSongsInterval = setInterval(function() { loadSongs(); }, 45000);
+        }
+        let currentSongId = '';
+        function playSong(title, artist, avatar, lyrics, accentColor, songId) {
+            currentSongId = songId || '';
+            currentLyrics = (lyrics || '').trim();
+            if (speaking) { window.speechSynthesis.cancel(); speaking = false; updateSpeakBtn(); }
+            document.getElementById('playerTitle').textContent = title || 'Nenhuma música';
+            document.getElementById('playerArtist').textContent = artist || '—';
+            const av = document.getElementById('playerAvatar');
+            av.textContent = avatar || '🎵';
+            av.style.background = (accentColor && accentColor !== 'undefined') ? accentColor : '#1DB954';
+            document.getElementById('lyricsDisplay').style.display = 'block';
+            document.getElementById('lyricsDisplay').innerHTML = '<h4>🎤 Letra:</h4><br>' + (lyrics ? escapeHtml(lyrics).replace(/\n/g, '<br>') : '(sem letra)');
+            updateSpeakBtn();
+
+            const ap = document.getElementById('audioPlayer');
+            if (ap && currentSongId) {
+                ap.src = `/api/songs/${encodeURIComponent(currentSongId)}/audio.wav`;
+                ap.currentTime = 0;
+                ap.onended = function () {
+                    isPlaying = false;
+                    const btn = document.getElementById('playPauseBtn');
+                    if (btn) btn.textContent = '▶️';
+                };
+                if (isPlaying) ap.play().catch(() => {});
+            }
+        }
+        function updateSpeakBtn() {
+            const btn = document.getElementById('speakLyricsBtn');
+            if (!btn) return;
+            if (speaking) { btn.textContent = '⏹ Parar'; btn.title = 'Parar de ouvir'; }
+            else { btn.textContent = '🔊 Ouvir letra'; btn.title = 'Ouvir letra (voz do navegador)'; }
+        }
+        function toggleSpeakLyrics() {
+            if (speaking) {
+                window.speechSynthesis.cancel();
+                speaking = false;
+                updateSpeakBtn();
+                return;
+            }
+            if (!currentLyrics) {
+                alert('Selecione uma música com letra primeiro.');
+                return;
+            }
+            const u = new SpeechSynthesisUtterance(currentLyrics);
+            u.lang = 'pt-BR';
+            u.rate = 0.9;
+            u.onend = function() { speaking = false; updateSpeakBtn(); };
+            u.onerror = function() { speaking = false; updateSpeakBtn(); };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+            speaking = true;
+            updateSpeakBtn();
+        }
+        // Sincroniza o botão play/pause com o <audio>
+        (function attachAudioEvents() {
+            const ap = document.getElementById('audioPlayer');
+            if (!ap) return;
+            ap.onplay = function () {
+                isPlaying = true;
+                const btn = document.getElementById('playPauseBtn');
+                if (btn) btn.textContent = '⏸️';
+            };
+            ap.onpause = function () {
+                isPlaying = false;
+                const btn = document.getElementById('playPauseBtn');
+                if (btn) btn.textContent = '▶️';
+            };
+        })();
+        let songListData = [];
+        let currentSongIndex = -1;
+        let isPlaying = false;
+        let currentLyrics = '';
+        let speaking = false;
+
+        function openModal() {
+            const pref = loadPreferences();
+            const moodInput = document.getElementById('moodInput');
+            if (moodInput && (pref.defaultMood || '').trim()) moodInput.value = pref.defaultMood.trim();
+            document.getElementById('generateModal').classList.add('active');
+        }
+        function closeModal() { document.getElementById('generateModal').classList.remove('active'); }
+
+        function openPreferences() {
+            const pref = loadPreferences();
+            document.getElementById('prefTheme').value = pref.theme || 'dark';
+            document.getElementById('prefMood').value = pref.defaultMood || '';
+            document.getElementById('preferencesModal').classList.add('active');
+        }
+        function closePreferences() { document.getElementById('preferencesModal').classList.remove('active'); }
+        function openHelp() { document.getElementById('helpModal').classList.add('active'); }
+        function closeHelp() { document.getElementById('helpModal').classList.remove('active'); }
+        function loadPreferences() {
+            try {
+                const s = localStorage.getItem('ai-spotify-prefs');
+                return s ? JSON.parse(s) : { theme: 'dark', defaultMood: '' };
+            } catch (e) { return { theme: 'dark', defaultMood: '' }; }
+        }
+        function savePreferences() {
+            const theme = document.getElementById('prefTheme').value || 'dark';
+            const defaultMood = (document.getElementById('prefMood').value || '').trim();
+            const prefs = { theme, defaultMood };
+            localStorage.setItem('ai-spotify-prefs', JSON.stringify(prefs));
+            document.body.classList.toggle('light-theme', theme === 'light');
+            closePreferences();
+        }
+        function applyTheme() {
+            const pref = loadPreferences();
+            document.body.classList.toggle('light-theme', (pref.theme || 'dark') === 'light');
+        }
+
+        function prevSong() {
+            if (songListData.length === 0) return;
+            currentSongIndex = currentSongIndex <= 0 ? songListData.length - 1 : currentSongIndex - 1;
+            const s = songListData[currentSongIndex];
+            const color = colorForMoodGenre(s.mood, s.genre);
+            playSong(s.title, s.artist, s.avatar || '🎵', s.lyrics || '', color, s.id);
+        }
+        function nextSong() {
+            if (songListData.length === 0) return;
+            currentSongIndex = currentSongIndex < 0 || currentSongIndex >= songListData.length - 1 ? 0 : currentSongIndex + 1;
+            const s = songListData[currentSongIndex];
+            const color = colorForMoodGenre(s.mood, s.genre);
+            playSong(s.title, s.artist, s.avatar || '🎵', s.lyrics || '', color, s.id);
+        }
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('playPauseBtn');
+            if (btn) btn.textContent = isPlaying ? '⏸️' : '▶️';
+            if (songListData.length > 0 && currentSongIndex < 0) {
+                currentSongIndex = 0;
+                const s = songListData[0];
+                playSong(s.title, s.artist, s.avatar || '🎵', s.lyrics || '', colorForMoodGenre(s.mood, s.genre), s.id);
+            }
+            const ap = document.getElementById('audioPlayer');
+            if (!ap) return;
+            if (isPlaying) ap.play().catch(() => {});
+            else ap.pause();
+        }
+        async function generateFirstSong() {
+            const btn = document.querySelector('.generate-first-btn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+            let artist_id = document.getElementById('artistSelect').value;
+            if (!artist_id) {
+                try {
+                    const r = await fetch('/api/artists');
+                    const data = await r.json();
+                    const artists = data.artists || [];
+                    if (artists.length === 0) { alert('Nenhum artista IA disponível. Tente recarregar a página.'); if (btn) { btn.disabled = false; btn.textContent = '⚡ Gerar minha primeira música agora (1 clique)'; } return; }
+                    artist_id = artists[0].id;
+                } catch (e) { alert('Erro ao carregar artistas.'); if (btn) { btn.disabled = false; btn.textContent = '⚡ Gerar minha primeira música agora (1 clique)'; } return; }
+            }
+            const mood = (loadPreferences().defaultMood || '').trim() || 'alegre';
+            try {
+                const res = await fetch('/api/generate-song', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist_id, mood }) });
+                const data = await res.json();
+                if (data.success) {
+                    await loadArtists();
+                    await loadSongs();
+                    alert('🎵 Música "' + (data.song.title || '') + '" criada!');
+                } else alert('Erro: ' + (data.error || 'Ollama pode estar offline (localhost:11434).'));
+            } catch (e) { alert('Erro de conexão. Verifique o servidor e o Ollama.'); }
+            if (btn) { btn.disabled = false; btn.textContent = '⚡ Gerar minha primeira música agora (1 clique)'; }
+        }
+        async function generateSong() {
+            const generatingEl = document.getElementById('generating');
+            generatingEl.style.display = 'block';
+            const artist_id = document.getElementById('artistSelect').value;
+            const mood = document.getElementById('moodInput').value.trim() || 'alegre';
+            try {
+                const r = await fetch('/api/generate-song', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ artist_id, mood })
+                });
+                const data = await r.json();
+                if (data.success) {
+                    closeModal();
+                    await loadSongs();
+                    alert('🎵 Música "' + (data.song.title || '') + '" criada por ' + (data.song.artist || '') + '!');
+                } else {
+                    alert('Erro: ' + (data.error || 'Falha ao gerar música. Verifique se o Ollama está rodando (localhost:11434).'));
+                }
+            } catch (e) {
+                alert('Erro de conexão. Verifique se o servidor está rodando e se o Ollama está ativo.');
+                console.error(e);
+            }
+            generatingEl.style.display = 'none';
+        }
+        initPage();
+    </script>
+</body>
+</html>

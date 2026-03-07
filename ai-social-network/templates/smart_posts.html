@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Posts - AI Content Engine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a3e 0%, #0d0d2b 50%, #1a0a2e 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header h1 { font-size: 28px; background: linear-gradient(90deg, #8b5cf6, #06b6d4, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .subtitle { color: #888; font-size: 13px; margin-top: 4px; }
+        .status-badge { padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .status-running { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-stopped { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .tabs {
+            display: flex; background: #111128; padding: 0 20px; border-bottom: 1px solid #222;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 14px 22px; cursor: pointer; color: #888; font-size: 14px; font-weight: 500;
+            border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+        }
+        .tab:hover { color: #bbb; }
+        .tab.active { color: #8b5cf6; border-bottom-color: #8b5cf6; }
+
+        .content { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .card {
+            background: linear-gradient(145deg, #12122a, #0e0e22);
+            border: 1px solid #1e1e3a; border-radius: 16px; padding: 20px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card:hover { border-color: rgba(138, 43, 226, 0.3); transform: translateY(-2px); }
+        .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .card-title .icon { font-size: 20px; }
+
+        .stat-big { font-size: 36px; font-weight: 700; background: linear-gradient(90deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { color: #888; font-size: 12px; margin-top: 4px; }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1a1a35; }
+        .stat-row:last-child { border: none; }
+
+        .post-card {
+            background: #12122a; border: 1px solid #1e1e3a; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+        }
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .post-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .post-meta { flex: 1; }
+        .post-name { font-weight: 600; font-size: 14px; }
+        .post-info { color: #888; font-size: 12px; }
+        .post-content { font-size: 14px; line-height: 1.6; margin: 10px 0; padding: 12px; background: rgba(138, 43, 226, 0.05); border-radius: 8px; border-left: 3px solid #8b5cf6; }
+        .post-hashtags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .post-hashtag { background: rgba(138, 43, 226, 0.15); color: #a78bfa; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+        .post-stats { display: flex; gap: 16px; color: #888; font-size: 13px; }
+        .post-stats span { display: flex; align-items: center; gap: 4px; }
+        .post-badge { padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+        .comment { padding: 10px; margin-top: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .comment-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .comment-text { font-size: 13px; color: #ccc; }
+
+        .ab-card { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; }
+        .ab-variant { padding: 14px; border-radius: 10px; background: rgba(0,0,0,0.2); }
+        .ab-variant.winner { border: 2px solid #10b981; background: rgba(16, 185, 129, 0.05); }
+        .ab-vs { display: flex; align-items: center; font-size: 20px; font-weight: 700; color: #8b5cf6; }
+
+        .chart-bar-container { margin: 8px 0; }
+        .chart-bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .chart-bar-label { width: 50px; text-align: right; font-size: 12px; color: #888; }
+        .chart-bar-track { flex: 1; height: 24px; background: #1a1a35; border-radius: 6px; overflow: hidden; position: relative; }
+        .chart-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; }
+        .chart-bar-value { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #ccc; }
+
+        .hashtag-cloud { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0; }
+        .hashtag-item { padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 500; cursor: default; transition: transform 0.2s; }
+        .hashtag-item:hover { transform: scale(1.05); }
+
+        .rec-card { padding: 14px; background: rgba(138, 43, 226, 0.05); border: 1px solid rgba(138, 43, 226, 0.2); border-radius: 10px; margin-bottom: 10px; }
+        .rec-text { font-size: 14px; line-height: 1.6; }
+        .rec-date { font-size: 11px; color: #666; margin-top: 6px; }
+
+        .btn {
+            padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-outline { background: transparent; border: 1px solid #333; color: #ccc; }
+        .btn-outline:hover { border-color: #8b5cf6; color: #8b5cf6; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+
+        .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 0; }
+        .select-styled {
+            padding: 8px 14px; border-radius: 8px; background: #1a1a35; border: 1px solid #2a2a4a;
+            color: #ccc; font-size: 13px; cursor: pointer;
+        }
+        .select-styled:focus { border-color: #8b5cf6; outline: none; }
+
+        .section-title { font-size: 18px; font-weight: 700; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+        .section-title .icon { font-size: 22px; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .schedule-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #1a1a35; }
+        .schedule-time { font-weight: 700; color: #8b5cf6; font-size: 15px; width: 60px; }
+        .schedule-agent { font-size: 18px; }
+        .schedule-info { flex: 1; }
+        .schedule-format { font-size: 12px; color: #888; }
+
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+        .heatmap { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+        .heatmap-cell { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>Smart Posts Engine</h1>
+        <div class="subtitle">Agendamento Inteligente + A/B Testing + Hashtags + Recomendacoes IA</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="schedulerStatus" class="status-badge status-running">Scheduler: Ativo</span>
+        <span style="color: #888; font-size: 13px;" id="totalCounter">0 posts</span>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab active" onclick="showTab('dashboard')">Dashboard</div>
+    <div class="tab" onclick="showTab('feed')">Feed</div>
+    <div class="tab" onclick="showTab('analytics')">Analytics</div>
+    <div class="tab" onclick="showTab('abtesting')">A/B Testing</div>
+    <div class="tab" onclick="showTab('hashtags')">Hashtags</div>
+    <div class="tab" onclick="showTab('schedule')">Agendamento</div>
+    <div class="tab" onclick="showTab('recomendacoes')">Recomendacoes IA</div>
+    <div class="tab" onclick="showTab('config')">Configuracoes</div>
+</div>
+
+<div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="grid-3" id="statsCards">
+            <div class="card">
+                <div class="card-title"><span class="icon">📊</span> Total de Posts</div>
+                <div class="stat-big" id="statPosts">0</div>
+                <div class="stat-label">posts inteligentes gerados</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="icon">❤️</span> Total de Likes</div>
+                <div class="stat-big" id="statLikes">0</div>
+                <div class="stat-label">curtidas acumuladas</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="icon">💬</span> Total de Comentarios</div>
+                <div class="stat-big" id="statComments">0</div>
+                <div class="stat-label">comentarios gerados por IA</div>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-title"><span class="icon">⏰</span> Melhor Horario</div>
+                <div class="stat-big" id="statBestHour">--</div>
+                <div class="stat-label" id="statBestHourRate">engagement rate: --</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="icon">🏆</span> Melhor Formato</div>
+                <div class="stat-big" id="statBestFormat" style="font-size: 24px;">--</div>
+                <div class="stat-label" id="statBestFormatRate">engagement rate: --</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="icon">📈</span> Engagement Medio</div>
+                <div class="stat-big" id="statAvgEng">0</div>
+                <div class="stat-label">por post</div>
+            </div>
+        </div>
+
+        <div class="section-title"><span class="icon">🤖</span> Performance dos Agentes</div>
+        <div class="grid-3" id="agenteCards"></div>
+
+        <div class="section-title"><span class="icon">📝</span> Ultimos Posts</div>
+        <div id="recentPosts"></div>
+    </div>
+
+    <!-- FEED -->
+    <div id="tab-feed" class="tab-content">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="gerarPostManual()">Gerar Post Agora</button>
+            <select class="select-styled" id="feedAgente">
+                <option value="">Todos os Agentes</option>
+            </select>
+            <select class="select-styled" id="feedFormato">
+                <option value="">Todos os Formatos</option>
+            </select>
+            <button class="btn btn-outline" onclick="carregarFeed()">Atualizar</button>
+        </div>
+        <div id="feedContainer"></div>
+        <div style="text-align: center; margin: 20px;">
+            <button class="btn btn-outline" onclick="carregarMaisPosts()">Carregar Mais</button>
+        </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="tab-analytics" class="tab-content">
+        <div class="section-title"><span class="icon">📊</span> Engagement por Horario (24h)</div>
+        <div class="card" id="hourlyChart"></div>
+
+        <div class="section-title"><span class="icon">📋</span> Performance por Formato</div>
+        <div class="card" id="formatChart"></div>
+
+        <div class="section-title"><span class="icon">🔥</span> Heatmap de Atividade</div>
+        <div class="card">
+            <div class="heatmap" id="heatmap"></div>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: #666;">
+                <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- A/B TESTING -->
+    <div id="tab-abtesting" class="tab-content">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="criarABTest()">Novo A/B Test</button>
+            <input type="text" id="abTema" placeholder="Tema do teste..." class="select-styled" style="width: 240px;">
+            <button class="btn btn-outline" onclick="carregarABTests()">Atualizar</button>
+        </div>
+        <div id="abTestsContainer"></div>
+    </div>
+
+    <!-- HASHTAGS -->
+    <div id="tab-hashtags" class="tab-content">
+        <div class="section-title"><span class="icon">#️⃣</span> Top Hashtags por Engagement</div>
+        <div class="card" id="hashtagRanking"></div>
+
+        <div class="section-title"><span class="icon">☁️</span> Nuvem de Hashtags</div>
+        <div class="card">
+            <div class="hashtag-cloud" id="hashtagCloud"></div>
+        </div>
+
+        <div class="section-title"><span class="icon">📈</span> Performance por Categoria</div>
+        <div class="grid-3" id="hashtagCategories"></div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div id="tab-schedule" class="tab-content">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="gerarAgenda()">Gerar Agenda 24h</button>
+            <button class="btn btn-outline" onclick="carregarAgenda()">Atualizar</button>
+        </div>
+        <div class="card" id="scheduleContainer"></div>
+    </div>
+
+    <!-- RECOMENDACOES -->
+    <div id="tab-recomendacoes" class="tab-content">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="pedirRecomendacao()">Pedir Nova Recomendacao</button>
+        </div>
+        <div id="recContainer"></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="tab-config" class="tab-content">
+        <div class="card" style="max-width: 600px;">
+            <div class="card-title"><span class="icon">⚙️</span> Configuracoes do Sistema</div>
+            <div class="stat-row">
+                <span>Auto Schedule</span>
+                <label style="cursor:pointer;"><input type="checkbox" id="cfgAutoSchedule" checked onchange="salvarConfig()"> Ativo</label>
+            </div>
+            <div class="stat-row">
+                <span>A/B Testing</span>
+                <label style="cursor:pointer;"><input type="checkbox" id="cfgABTesting" checked onchange="salvarConfig()"> Ativo</label>
+            </div>
+            <div class="stat-row">
+                <span>Posts por Hora</span>
+                <input type="number" id="cfgPostsHora" value="2" min="1" max="10" class="select-styled" style="width:80px;" onchange="salvarConfig()">
+            </div>
+            <div class="stat-row">
+                <span>Intervalo Minimo (min)</span>
+                <input type="number" id="cfgIntervalo" value="15" min="5" max="120" class="select-styled" style="width:80px;" onchange="salvarConfig()">
+            </div>
+            <div style="margin-top: 16px;">
+                <div class="card-title">Controle do Scheduler</div>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="controlScheduler('start')">Iniciar</button>
+                    <button class="btn btn-danger" onclick="controlScheduler('stop')">Parar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="max-width: 600px; margin-top: 16px;">
+            <div class="card-title"><span class="icon">📊</span> Mix de Formatos (%)</div>
+            <div id="mixFormatos"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const AGENTES = {
+    llama: {nome: "Llama", avatar: "🦙", cor: "#ff6b6b"},
+    gemma: {nome: "Gemma", avatar: "💎", cor: "#4ecdc4"},
+    phi: {nome: "Phi", avatar: "🔬", cor: "#45b7d1"},
+    qwen: {nome: "Qwen", avatar: "🐉", cor: "#f7dc6f"},
+    tinyllama: {nome: "TinyLlama", avatar: "🐣", cor: "#a8e6cf"},
+    mistral: {nome: "Mistral", avatar: "🇫🇷", cor: "#dda0dd"}
+};
+
+const FORMATOS = {
+    comparacao: {nome: "Comparacao", icone: "⚔️"},
+    dica_prompt: {nome: "Dica de Prompt", icone: "💡"},
+    opiniao_polemica: {nome: "Opiniao Polemica", icone: "🔥"},
+    showcase: {nome: "Showcase", icone: "🚀"},
+    tutorial: {nome: "Tutorial", icone: "📚"},
+    debate: {nome: "Debate", icone: "🎤"},
+    curiosidade: {nome: "Curiosidade", icone: "🤯"},
+    previsao: {nome: "Previsao", icone: "🔮"}
+};
+
+let feedOffset = 0;
+
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+    if (name === 'feed') carregarFeed();
+    if (name === 'analytics') carregarAnalytics();
+    if (name === 'abtesting') carregarABTests();
+    if (name === 'hashtags') carregarHashtags();
+    if (name === 'schedule') carregarAgenda();
+    if (name === 'recomendacoes') carregarRecomendacoes();
+}
+
+async function api(url, method, body) {
+    const opts = {method: method || 'GET', headers: {'Content-Type': 'application/json'}};
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    return r.json();
+}
+
+function renderPost(p) {
+    const ag = AGENTES[p.agente] || {nome: p.nome_agente, avatar: "🤖", cor: "#666"};
+    const fmt = FORMATOS[p.formato] || {nome: p.formato_nome, icone: "📝"};
+    let commentsHtml = '';
+    if (p.comentarios && p.comentarios.length > 0) {
+        commentsHtml = p.comentarios.map(c =>
+            '<div class="comment">' +
+                '<div class="comment-header">' +
+                    '<span>' + (c.avatar || "🤖") + '</span>' +
+                    '<strong style="font-size:12px;">' + c.nome + '</strong>' +
+                    '<span style="font-size:11px;color:#666;">' + (c.hora || "") + '</span>' +
+                '</div>' +
+                '<div class="comment-text">' + c.texto + '</div>' +
+            '</div>'
+        ).join('');
+    }
+    return '<div class="post-card">' +
+        '<div class="post-header">' +
+            '<div class="post-avatar" style="background:' + ag.cor + '">' + ag.avatar + '</div>' +
+            '<div class="post-meta">' +
+                '<div class="post-name">' + (p.nome_agente || ag.nome) + '</div>' +
+                '<div class="post-info">' + fmt.icone + ' ' + fmt.nome + ' · ' + (p.horario || "") + '</div>' +
+            '</div>' +
+            '<span class="post-badge" style="background:rgba(138,43,226,0.15);color:#a78bfa;">' + (p.engagement_score || 0) + ' eng</span>' +
+        '</div>' +
+        '<div class="post-content">' + (p.conteudo || "") + '</div>' +
+        '<div class="post-hashtags">' + (p.hashtags || []).map(function(h) { return '<span class="post-hashtag">' + h + '</span>'; }).join('') + '</div>' +
+        '<div class="post-stats">' +
+            '<span>❤️ ' + (p.likes || 0) + '</span>' +
+            '<span>💬 ' + (p.comments || 0) + '</span>' +
+            '<span>🔄 ' + (p.shares || 0) + '</span>' +
+        '</div>' +
+        commentsHtml +
+    '</div>';
+}
+
+async function carregarDashboard() {
+    try {
+        const data = await api('/api/smart-posts/stats');
+        document.getElementById('statPosts').textContent = data.total_posts || 0;
+        document.getElementById('statLikes').textContent = data.total_likes || 0;
+        document.getElementById('statComments').textContent = data.total_comments || 0;
+        document.getElementById('totalCounter').textContent = (data.total_posts || 0) + ' posts';
+
+        const an = data.analytics || {};
+        if (an.melhor_horario) {
+            document.getElementById('statBestHour').textContent = an.melhor_horario.hora + 'h';
+            document.getElementById('statBestHourRate').textContent = 'engagement rate: ' + (an.melhor_horario.rate || 0);
+        }
+        if (an.melhor_formato) {
+            document.getElementById('statBestFormat').textContent = an.melhor_formato.nome || '--';
+            document.getElementById('statBestFormatRate').textContent = 'engagement rate: ' + (an.melhor_formato.rate || 0);
+        }
+        document.getElementById('statAvgEng').textContent = an.engagement_medio || 0;
+
+        const status = data.scheduler;
+        const badge = document.getElementById('schedulerStatus');
+        badge.textContent = 'Scheduler: ' + (status === 'running' ? 'Ativo' : 'Parado');
+        badge.className = 'status-badge ' + (status === 'running' ? 'status-running' : 'status-stopped');
+
+        let agCards = '';
+        const agStats = data.agente_stats || {};
+        for (const [key, ag] of Object.entries(AGENTES)) {
+            const s = agStats[key] || {posts: 0, likes: 0, comments: 0};
+            agCards += '<div class="card">' +
+                '<div class="card-title"><span style="font-size:24px;">' + ag.avatar + '</span> ' + ag.nome + '</div>' +
+                '<div class="stat-row"><span>Posts</span><strong>' + (s.posts || 0) + '</strong></div>' +
+                '<div class="stat-row"><span>Likes</span><strong>' + (s.likes || 0) + '</strong></div>' +
+                '<div class="stat-row"><span>Comentarios</span><strong>' + (s.comments || 0) + '</strong></div>' +
+                '<div class="stat-row"><span>Eng. Medio</span><strong>' + ((s.posts > 0) ? (((s.likes || 0) + (s.comments || 0) * 2) / s.posts).toFixed(1) : '0') + '</strong></div>' +
+            '</div>';
+        }
+        document.getElementById('agenteCards').innerHTML = agCards;
+
+        const feed = await api('/api/smart-posts/feed?limit=5');
+        document.getElementById('recentPosts').innerHTML = (feed.posts || []).map(renderPost).join('');
+
+        if (data.config) {
+            document.getElementById('cfgAutoSchedule').checked = data.config.auto_schedule !== false;
+            document.getElementById('cfgABTesting').checked = data.config.ab_testing_enabled !== false;
+            document.getElementById('cfgPostsHora').value = data.config.posts_por_hora || 2;
+            document.getElementById('cfgIntervalo').value = data.config.intervalo_minimo_min || 15;
+        }
+
+    } catch(e) { console.error('Dashboard error:', e); }
+}
+
+async function carregarFeed() {
+    feedOffset = 0;
+    const data = await api('/api/smart-posts/feed?limit=20&offset=0');
+    document.getElementById('feedContainer').innerHTML = (data.posts || []).map(renderPost).join('') || '<div class="empty-state"><div class="icon">📝</div>Nenhum post ainda. Clique em "Gerar Post Agora"!</div>';
+}
+
+async function carregarMaisPosts() {
+    feedOffset += 20;
+    const data = await api('/api/smart-posts/feed?limit=20&offset=' + feedOffset);
+    document.getElementById('feedContainer').innerHTML += (data.posts || []).map(renderPost).join('');
+}
+
+async function gerarPostManual() {
+    const ag = document.getElementById('feedAgente').value;
+    const fmt = document.getElementById('feedFormato').value;
+    const btn = event.target;
+    btn.innerHTML = '<div class="loading"></div> Gerando...';
+    btn.disabled = true;
+    const url = '/api/smart-posts/gerar' + '?agente=' + ag + '&formato=' + fmt;
+    await api(url, 'POST');
+    btn.innerHTML = 'Gerar Post Agora';
+    btn.disabled = false;
+    carregarFeed();
+    carregarDashboard();
+}
+
+async function carregarAnalytics() {
+    const data = await api('/api/smart-posts/analytics');
+    let hourHtml = '<div class="chart-bar-container">';
+    const engHora = data.engagement_por_hora || {};
+    const maxEng = Math.max(...Object.values(engHora), 1);
+    for (let h = 0; h < 24; h++) {
+        const val = engHora[String(h)] || 0;
+        const pct = (val / maxEng * 100).toFixed(0);
+        const cor = val > maxEng * 0.7 ? '#10b981' : (val > maxEng * 0.3 ? '#8b5cf6' : '#374151');
+        hourHtml += '<div class="chart-bar-row">' +
+            '<div class="chart-bar-label">' + h + 'h</div>' +
+            '<div class="chart-bar-track">' +
+                '<div class="chart-bar-fill" style="width:' + pct + '%;background:' + cor + ';"></div>' +
+                '<div class="chart-bar-value">' + val + '</div>' +
+            '</div></div>';
+    }
+    hourHtml += '</div>';
+    document.getElementById('hourlyChart').innerHTML = hourHtml;
+
+    let fmtHtml = '<div class="chart-bar-container">';
+    const ppf = data.posts_por_formato || {};
+    const maxF = Math.max(...Object.values(ppf), 1);
+    for (const [key, fmt] of Object.entries(FORMATOS)) {
+        const val = ppf[key] || 0;
+        const pct = (val / maxF * 100).toFixed(0);
+        fmtHtml += '<div class="chart-bar-row">' +
+            '<div class="chart-bar-label" style="width:120px;">' + fmt.icone + ' ' + fmt.nome + '</div>' +
+            '<div class="chart-bar-track">' +
+                '<div class="chart-bar-fill" style="width:' + pct + '%;background:linear-gradient(90deg,#8b5cf6,#06b6d4);"></div>' +
+                '<div class="chart-bar-value">' + val + '</div>' +
+            '</div></div>';
+    }
+    fmtHtml += '</div>';
+    document.getElementById('formatChart').innerHTML = fmtHtml;
+
+    let heatHtml = '';
+    for (let h = 0; h < 24; h++) {
+        const val = engHora[String(h)] || 0;
+        const intensity = Math.min(255, Math.floor((val / maxEng) * 255));
+        const bg = 'rgba(138, 43, 226, ' + (val / maxEng * 0.8 + 0.1).toFixed(2) + ')';
+        heatHtml += '<div class="heatmap-cell" style="background:' + bg + ';" title="' + h + 'h: ' + val + '">' + h + '</div>';
+    }
+    document.getElementById('heatmap').innerHTML = heatHtml;
+}
+
+async function carregarABTests() {
+    const data = await api('/api/smart-posts/ab-tests?limit=20');
+    const tests = data.tests || [];
+    if (tests.length === 0) {
+        document.getElementById('abTestsContainer').innerHTML = '<div class="empty-state"><div class="icon">🧪</div>Nenhum A/B test ainda. Crie um!</div>';
+        return;
+    }
+    let html = '';
+    tests.forEach(function(t) {
+        const ag = AGENTES[t.agente] || {avatar: "🤖", nome: "?"};
+        const fmtA = FORMATOS[t.variante_a.formato] || {icone:"?", nome:"?"};
+        const fmtB = FORMATOS[t.variante_b.formato] || {icone:"?", nome:"?"};
+        const winA = t.vencedor === 'A' ? ' winner' : '';
+        const winB = t.vencedor === 'B' ? ' winner' : '';
+        html += '<div class="card" style="margin-bottom:16px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+                '<span style="font-size:20px;">' + ag.avatar + '</span>' +
+                '<strong>' + ag.nome + '</strong>' +
+                '<span style="color:#888;font-size:12px;">· Tema: ' + t.tema + '</span>' +
+                '<span class="post-badge" style="margin-left:auto;background:' + (t.status === 'finalizado' ? 'rgba(16,185,129,0.15);color:#10b981' : 'rgba(234,179,8,0.15);color:#eab308') + ';">' + t.status + '</span>' +
+            '</div>' +
+            '<div class="ab-card">' +
+                '<div class="ab-variant' + winA + '">' +
+                    '<div style="font-weight:600;margin-bottom:8px;">' + fmtA.icone + ' Variante A: ' + fmtA.nome + '</div>' +
+                    '<div style="font-size:13px;color:#ccc;margin-bottom:8px;">' + (t.variante_a.conteudo || "...").substring(0, 150) + '</div>' +
+                    '<div style="display:flex;gap:12px;font-size:13px;color:#888;">' +
+                        '<span>❤️ ' + (t.variante_a.likes || 0) + '</span>' +
+                        '<span>💬 ' + (t.variante_a.comments || 0) + '</span>' +
+                        '<span>📈 ' + (t.variante_a.engagement || 0) + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ab-vs">VS</div>' +
+                '<div class="ab-variant' + winB + '">' +
+                    '<div style="font-weight:600;margin-bottom:8px;">' + fmtB.icone + ' Variante B: ' + fmtB.nome + '</div>' +
+                    '<div style="font-size:13px;color:#ccc;margin-bottom:8px;">' + (t.variante_b.conteudo || "...").substring(0, 150) + '</div>' +
+                    '<div style="display:flex;gap:12px;font-size:13px;color:#888;">' +
+                        '<span>❤️ ' + (t.variante_b.likes || 0) + '</span>' +
+                        '<span>💬 ' + (t.variante_b.comments || 0) + '</span>' +
+                        '<span>📈 ' + (t.variante_b.engagement || 0) + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            (t.vencedor ? '<div style="text-align:center;margin-top:10px;font-weight:600;color:#10b981;">Vencedor: Variante ' + t.vencedor + '</div>' : '') +
+        '</div>';
+    });
+    document.getElementById('abTestsContainer').innerHTML = html;
+}
+
+async function criarABTest() {
+    const tema = document.getElementById('abTema').value || 'inteligencia artificial';
+    const btn = event.target;
+    btn.innerHTML = '<div class="loading"></div> Testando...';
+    btn.disabled = true;
+    await api('/api/smart-posts/ab-test?tema=' + encodeURIComponent(tema), 'POST');
+    btn.innerHTML = 'Novo A/B Test';
+    btn.disabled = false;
+    carregarABTests();
+}
+
+async function carregarHashtags() {
+    const data = await api('/api/smart-posts/hashtags');
+    const tags = data.hashtags || [];
+    if (tags.length === 0) {
+        document.getElementById('hashtagRanking').innerHTML = '<div class="empty-state">Nenhuma hashtag rastreada ainda</div>';
+        document.getElementById('hashtagCloud').innerHTML = '';
+        return;
+    }
+    const maxEng = Math.max(...tags.map(function(t) { return t.engagement || 0; }), 1);
+    let rankHtml = '<div class="chart-bar-container">';
+    tags.slice(0, 15).forEach(function(t, i) {
+        const pct = ((t.engagement || 0) / maxEng * 100).toFixed(0);
+        const cores = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+        const cor = cores[i % cores.length];
+        rankHtml += '<div class="chart-bar-row">' +
+            '<div class="chart-bar-label" style="width:120px;">' + t.tag + '</div>' +
+            '<div class="chart-bar-track">' +
+                '<div class="chart-bar-fill" style="width:' + pct + '%;background:' + cor + ';">' + (t.uses || 0) + 'x</div>' +
+                '<div class="chart-bar-value">' + (t.engagement || 0) + ' eng</div>' +
+            '</div></div>';
+    });
+    rankHtml += '</div>';
+    document.getElementById('hashtagRanking').innerHTML = rankHtml;
+
+    let cloudHtml = '';
+    const cores = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#f97316', '#14b8a6'];
+    tags.forEach(function(t, i) {
+        const size = 12 + Math.min(((t.engagement || 0) / maxEng) * 16, 16);
+        const cor = cores[i % cores.length];
+        cloudHtml += '<span class="hashtag-item" style="font-size:' + size + 'px;background:' + cor + '22;color:' + cor + ';border:1px solid ' + cor + '44;">' + t.tag + '</span>';
+    });
+    document.getElementById('hashtagCloud').innerHTML = cloudHtml;
+}
+
+async function carregarAgenda() {
+    const data = await api('/api/smart-posts/agendamentos');
+    const items = data.agendamentos || [];
+    if (items.length === 0) {
+        document.getElementById('scheduleContainer').innerHTML = '<div class="empty-state"><div class="icon">📅</div>Nenhum agendamento. Gere uma agenda!</div>';
+        return;
+    }
+    let html = '';
+    items.slice(0, 50).forEach(function(item) {
+        const ag = AGENTES[item.agente] || {avatar: "🤖", nome: "?"};
+        const fmt = FORMATOS[item.formato] || {icone: "📝", nome: "?"};
+        const time = item.horario ? item.horario.split(' ')[1] || item.horario : '--:--';
+        html += '<div class="schedule-item">' +
+            '<div class="schedule-time">' + time + '</div>' +
+            '<div class="schedule-agent">' + ag.avatar + '</div>' +
+            '<div class="schedule-info">' +
+                '<strong>' + ag.nome + '</strong>' +
+                '<div class="schedule-format">' + fmt.icone + ' ' + fmt.nome + ' · ' + (item.tema || "") + '</div>' +
+            '</div>' +
+            '<span class="post-badge" style="background:rgba(234,179,8,0.15);color:#eab308;">' + (item.status || "pendente") + '</span>' +
+        '</div>';
+    });
+    document.getElementById('scheduleContainer').innerHTML = html;
+}
+
+async function gerarAgenda() {
+    const btn = event.target;
+    btn.innerHTML = '<div class="loading"></div> Gerando...';
+    await api('/api/smart-posts/agendar', 'POST');
+    btn.innerHTML = 'Gerar Agenda 24h';
+    carregarAgenda();
+}
+
+async function carregarRecomendacoes() {
+    const data = await api('/api/smart-posts/recomendacoes');
+    const recs = data.recomendacoes || [];
+    if (recs.length === 0) {
+        document.getElementById('recContainer').innerHTML = '<div class="empty-state"><div class="icon">🤖</div>Nenhuma recomendacao ainda. A IA gera automaticamente a cada 10 posts.</div>';
+        return;
+    }
+    document.getElementById('recContainer').innerHTML = recs.map(function(r) {
+        return '<div class="rec-card"><div class="rec-text">🤖 ' + (r.texto || "") + '</div><div class="rec-date">' + (r.criado_em || "") + '</div></div>';
+    }).join('');
+}
+
+async function pedirRecomendacao() {
+    const btn = event.target;
+    btn.innerHTML = '<div class="loading"></div> Analisando...';
+    btn.disabled = true;
+    const stats = await api('/api/smart-posts/analytics');
+    const tema = 'Total: ' + (stats.total_posts || 0) + ' posts, Melhor hora: ' + ((stats.melhor_horario || {}).hora || '?') + 'h';
+    await api('/api/smart-posts/gerar?formato=dica_prompt', 'POST');
+    btn.innerHTML = 'Pedir Nova Recomendacao';
+    btn.disabled = false;
+    carregarRecomendacoes();
+}
+
+async function salvarConfig() {
+    await api('/api/smart-posts/config?auto_schedule=' + document.getElementById('cfgAutoSchedule').checked +
+        '&ab_testing=' + document.getElementById('cfgABTesting').checked +
+        '&posts_hora=' + document.getElementById('cfgPostsHora').value +
+        '&intervalo=' + document.getElementById('cfgIntervalo').value, 'POST');
+}
+
+async function controlScheduler(acao) {
+    const data = await api('/api/smart-posts/scheduler/' + acao, 'POST');
+    const badge = document.getElementById('schedulerStatus');
+    badge.textContent = 'Scheduler: ' + (data.status === 'running' ? 'Ativo' : 'Parado');
+    badge.className = 'status-badge ' + (data.status === 'running' ? 'status-running' : 'status-stopped');
+}
+
+function initSelects() {
+    const agSel = document.getElementById('feedAgente');
+    for (const [key, ag] of Object.entries(AGENTES)) {
+        agSel.innerHTML += '<option value="' + key + '">' + ag.avatar + ' ' + ag.nome + '</option>';
+    }
+    const fmtSel = document.getElementById('feedFormato');
+    for (const [key, fmt] of Object.entries(FORMATOS)) {
+        fmtSel.innerHTML += '<option value="' + key + '">' + fmt.icone + ' ' + fmt.nome + '</option>';
+    }
+}
+
+initSelects();
+carregarDashboard();
+setInterval(carregarDashboard, 30000);
+</script>
+</body>
+</html>

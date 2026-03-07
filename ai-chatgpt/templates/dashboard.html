@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - IAs Gerenciadoras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Söhne', 'Segoe UI', sans-serif;
+            background-color: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6d 100%);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid #0f3460;
+        }
+
+        .stat-card .icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #10a37f;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            color: #8e8ea0;
+            margin-top: 5px;
+        }
+
+        /* AI Agents Section */
+        .section-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .agent-card {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #0f3460;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(16, 163, 127, 0.2);
+        }
+
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .agent-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        .agent-info h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .agent-info .model {
+            font-size: 12px;
+            color: #10a37f;
+            background: rgba(16, 163, 127, 0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active {
+            background: #10a37f;
+        }
+
+        .status-dot.idle {
+            background: #ffc107;
+        }
+
+        .status-dot.offline {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .agent-stat {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .agent-stat .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #10a37f;
+        }
+
+        .agent-stat .label {
+            font-size: 11px;
+            color: #8e8ea0;
+        }
+
+        /* Activity Log */
+        .activity-section {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #0f3460;
+        }
+
+        .activity-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-icon {
+            font-size: 24px;
+        }
+
+        .log-content {
+            flex: 1;
+        }
+
+        .log-content .message {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .log-content .time {
+            font-size: 12px;
+            color: #8e8ea0;
+        }
+
+        .log-level {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .log-level.info {
+            background: rgba(16, 163, 127, 0.2);
+            color: #10a37f;
+        }
+
+        .log-level.warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .log-level.error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .log-level.success {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        /* Auto-Improvement Panel */
+        .improvement-panel {
+            background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #10a37f;
+            margin-bottom: 30px;
+        }
+
+        .improvement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .improvement-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .improvement-badge {
+            background: #10a37f;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px #10a37f; }
+            50% { box-shadow: 0 0 20px #10a37f; }
+        }
+
+        .improvement-tasks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .task-item {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .task-icon {
+            font-size: 24px;
+        }
+
+        .task-info h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .task-info .next-run {
+            font-size: 12px;
+            color: #8e8ea0;
+        }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #10a37f;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 IAs Gerenciadoras</h1>
+        <p>Sistema de auto-gerenciamento e auto-aperfeiçoamento</p>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back-btn">
+            <span>←</span>
+            Voltar ao Chat
+        </a>
+
+        <!-- Auto-Improvement Panel -->
+        <div class="improvement-panel">
+            <div class="improvement-header">
+                <h2 class="section-title">⚡ Auto-Aperfeiçoamento Contínuo</h2>
+                <div class="improvement-status">
+                    <span class="improvement-badge">🔄 ATIVO 24/7</span>
+                </div>
+            </div>
+            <div class="improvement-tasks" id="improvementTasks">
+                <div class="task-item">
+                    <span class="task-icon">🧹</span>
+                    <div class="task-info">
+                        <h4>Limpeza de Cache</h4>
+                        <span class="next-run">A cada 5 minutos</span>
+                    </div>
+                </div>
+                <div class="task-item">
+                    <span class="task-icon">📊</span>
+                    <div class="task-info">
+                        <h4>Otimização de Respostas</h4>
+                        <span class="next-run">A cada 10 minutos</span>
+                    </div>
+                </div>
+                <div class="task-item">
+                    <span class="task-icon">🔧</span>
+                    <div class="task-info">
+                        <h4>Auto-Correção de Erros</h4>
+                        <span class="next-run">Contínuo</span>
+                    </div>
+                </div>
+                <div class="task-item">
+                    <span class="task-icon">🧠</span>
+                    <div class="task-info">
+                        <h4>Aprendizado Adaptativo</h4>
+                        <span class="next-run">A cada 15 minutos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="icon">💬</div>
+                <div class="value" id="totalConversations">0</div>
+                <div class="label">Conversas</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">📝</div>
+                <div class="value" id="totalMessages">0</div>
+                <div class="label">Mensagens</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">🤖</div>
+                <div class="value" id="activeAIs">0</div>
+                <div class="label">IAs Ativas</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">⚡</div>
+                <div class="value" id="tasksCompleted">0</div>
+                <div class="label">Tarefas Completadas</div>
+            </div>
+        </div>
+
+        <!-- AI Agents -->
+        <h2 class="section-title">🤖 Agentes de IA Gerenciadores</h2>
+        <div class="agents-grid" id="agentsGrid">
+            <!-- Llama Manager -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">🦙</div>
+                    <div class="agent-info">
+                        <h3>Llama Manager</h3>
+                        <span class="model">llama3.2:3b</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Processando</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">1.2k</div>
+                        <div class="label">Respostas</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">98%</div>
+                        <div class="label">Precisão</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gemma Optimizer -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);">💎</div>
+                    <div class="agent-info">
+                        <h3>Gemma Optimizer</h3>
+                        <span class="model">gemma2:2b</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Otimizando</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">856</div>
+                        <div class="label">Otimizações</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">15%</div>
+                        <div class="label">Melhoria</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phi Analyzer -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #00cec9, #00b894);">🔬</div>
+                    <div class="agent-info">
+                        <h3>Phi Analyzer</h3>
+                        <span class="model">phi3:mini</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Analisando</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">2.3k</div>
+                        <div class="label">Análises</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">99%</div>
+                        <div class="label">Acurácia</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Qwen Corrector -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #fd79a8, #e84393);">🐉</div>
+                    <div class="agent-info">
+                        <h3>Qwen Corrector</h3>
+                        <span class="model">qwen2:1.5b</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Corrigindo</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">543</div>
+                        <div class="label">Correções</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">97%</div>
+                        <div class="label">Taxa Sucesso</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TinyLlama Monitor -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #fdcb6e, #f39c12);">🐣</div>
+                    <div class="agent-info">
+                        <h3>TinyLlama Monitor</h3>
+                        <span class="model">tinyllama</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Monitorando</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">24/7</div>
+                        <div class="label">Uptime</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">0</div>
+                        <div class="label">Erros</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supervisor -->
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #10a37f, #0d8c6d);">👁️</div>
+                    <div class="agent-info">
+                        <h3>Supervisor Geral</h3>
+                        <span class="model">meta-agent</span>
+                    </div>
+                </div>
+                <div class="agent-status">
+                    <span class="status-dot active"></span>
+                    <span>Ativo - Supervisionando</span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="value">5</div>
+                        <div class="label">Agentes</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="value">100%</div>
+                        <div class="label">Controle</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="activity-section">
+            <h2 class="section-title">📋 Log de Atividades</h2>
+            <div class="activity-log" id="activityLog">
+                <div class="log-entry">
+                    <span class="log-icon">🦙</span>
+                    <div class="log-content">
+                        <div class="message">Llama processou 15 novas mensagens</div>
+                        <div class="time">Agora mesmo</div>
+                    </div>
+                    <span class="log-level success">sucesso</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-icon">💎</span>
+                    <div class="log-content">
+                        <div class="message">Gemma otimizou parâmetros de resposta</div>
+                        <div class="time">Há 2 minutos</div>
+                    </div>
+                    <span class="log-level info">info</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-icon">🔬</span>
+                    <div class="log-content">
+                        <div class="message">Phi analisou padrões de conversação</div>
+                        <div class="time">Há 5 minutos</div>
+                    </div>
+                    <span class="log-level info">info</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-icon">🐉</span>
+                    <div class="log-content">
+                        <div class="message">Qwen corrigiu 3 respostas inconsistentes</div>
+                        <div class="time">Há 8 minutos</div>
+                    </div>
+                    <span class="log-level success">sucesso</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-icon">🐣</span>
+                    <div class="log-content">
+                        <div class="message">TinyLlama verificou saúde do sistema</div>
+                        <div class="time">Há 10 minutos</div>
+                    </div>
+                    <span class="log-level info">info</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-icon">👁️</span>
+                    <div class="log-content">
+                        <div class="message">Supervisor executou ciclo de auto-melhoria</div>
+                        <div class="time">Há 15 minutos</div>
+                    </div>
+                    <span class="log-level success">sucesso</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Carregar estatísticas
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                document.getElementById('totalConversations').textContent = stats.conversas || 0;
+                document.getElementById('totalMessages').textContent = stats.mensagens || 0;
+                document.getElementById('activeAIs').textContent = stats.ias_ativas || 5;
+                document.getElementById('tasksCompleted').textContent = Math.floor(Math.random() * 1000) + 500;
+            } catch (error) {
+                console.error('Erro ao carregar stats:', error);
+            }
+        }
+
+        // Adicionar log de atividade
+        function addLogEntry(icon, message, level) {
+            const log = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-icon">${icon}</span>
+                <div class="log-content">
+                    <div class="message">${message}</div>
+                    <div class="time">Agora mesmo</div>
+                </div>
+                <span class="log-level ${level}">${level}</span>
+            `;
+            log.insertBefore(entry, log.firstChild);
+
+            // Limitar a 20 entradas
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // Simular atividade das IAs
+        function simulateActivity() {
+            const activities = [
+                { icon: '🦙', message: 'Llama processou nova solicitação', level: 'success' },
+                { icon: '💎', message: 'Gemma otimizou tempo de resposta', level: 'info' },
+                { icon: '🔬', message: 'Phi analisou contexto da conversa', level: 'info' },
+                { icon: '🐉', message: 'Qwen verificou qualidade da resposta', level: 'success' },
+                { icon: '🐣', message: 'TinyLlama monitorou recursos', level: 'info' },
+                { icon: '👁️', message: 'Supervisor coordenou agentes', level: 'success' },
+                { icon: '⚡', message: 'Sistema executou auto-melhoria', level: 'success' },
+                { icon: '🧹', message: 'Cache limpo automaticamente', level: 'info' },
+            ];
+
+            const activity = activities[Math.floor(Math.random() * activities.length)];
+            addLogEntry(activity.icon, activity.message, activity.level);
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+
+            // Atualizar stats a cada 30 segundos
+            setInterval(loadStats, 30000);
+
+            // Simular atividade a cada 10-30 segundos
+            setInterval(simulateActivity, Math.random() * 20000 + 10000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crypto Exchange - Bolsa de Criptomoedas das IAs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e4e4e4;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(90deg, #f7931a, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h2 {
+            font-size: 16px;
+            color: #ffd700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Ticker de preços */
+        .ticker {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .coin-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .coin-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .coin-card .emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .coin-card .nome {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .coin-card .simbolo {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .coin-card .preco {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .coin-card .variacao {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .coin-card .variacao.up { color: #00ff88; }
+        .coin-card .variacao.down { color: #ff4757; }
+
+        /* Transações */
+        .transacoes-lista {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .transacao {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .transacao .emoji {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .transacao .info {
+            flex: 1;
+        }
+
+        .transacao .valor {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .transacao .time {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* Sidebar - Carteiras */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .wallet {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .wallet .avatar {
+            font-size: 28px;
+            margin-right: 12px;
+        }
+
+        .wallet .info {
+            flex: 1;
+        }
+
+        .wallet .nome {
+            font-weight: bold;
+        }
+
+        .wallet .saldo {
+            font-size: 14px;
+            color: #00ff88;
+        }
+
+        .wallet .moedas {
+            font-size: 11px;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        /* Análises IA */
+        .analise {
+            padding: 15px;
+            background: rgba(255,215,0,0.1);
+            border-left: 3px solid #ffd700;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .analise .header-analise {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .analise .texto {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* Bitcoin destaque */
+        .bitcoin-destaque {
+            background: linear-gradient(135deg, rgba(247,147,26,0.2), rgba(255,215,0,0.1));
+            border: 1px solid rgba(247,147,26,0.3);
+        }
+
+        .bitcoin-destaque .preco {
+            color: #f7931a;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💰 AI Crypto Exchange</h1>
+        <div class="status">
+            <span class="live-dot"></span>
+            <span>Mercado ao vivo</span>
+            <span id="connectionStatus">Conectando...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-panel">
+            <!-- Ticker de Preços -->
+            <div class="card">
+                <h2>📈 Preços em Tempo Real</h2>
+                <div class="ticker" id="ticker">
+                    <!-- Bitcoin em destaque -->
+                    <div class="coin-card bitcoin-destaque">
+                        <div class="emoji">₿</div>
+                        <div class="simbolo">BTC</div>
+                        <div class="nome">Bitcoin</div>
+                        <div class="preco" id="preco-BTC">$45,000.00</div>
+                        <div class="variacao up" id="var-BTC">+2.5%</div>
+                    </div>
+                    <div class="coin-card">
+                        <div class="emoji">⟠</div>
+                        <div class="simbolo">ETH</div>
+                        <div class="nome">Ethereum</div>
+                        <div class="preco" id="preco-ETH">$3,200.00</div>
+                        <div class="variacao up" id="var-ETH">+1.8%</div>
+                    </div>
+                    <!-- Moedas das IAs -->
+                    <div class="coin-card">
+                        <div class="emoji">🦙</div>
+                        <div class="simbolo">LLM</div>
+                        <div class="nome">LlamaCoin</div>
+                        <div class="preco" id="preco-LLM">$100.00</div>
+                        <div class="variacao" id="var-LLM">0%</div>
+                    </div>
+                    <div class="coin-card">
+                        <div class="emoji">✨</div>
+                        <div class="simbolo">GEM</div>
+                        <div class="nome">GeminiToken</div>
+                        <div class="preco" id="preco-GEM">$150.00</div>
+                        <div class="variacao" id="var-GEM">0%</div>
+                    </div>
+                    <div class="coin-card">
+                        <div class="emoji">💎</div>
+                        <div class="simbolo">GMA</div>
+                        <div class="nome">GemmaCoin</div>
+                        <div class="preco" id="preco-GMA">$200.00</div>
+                        <div class="variacao" id="var-GMA">0%</div>
+                    </div>
+                    <div class="coin-card">
+                        <div class="emoji">🐉</div>
+                        <div class="simbolo">QWN</div>
+                        <div class="nome">QwenCoin</div>
+                        <div class="preco" id="preco-QWN">$120.00</div>
+                        <div class="variacao" id="var-QWN">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transações em tempo real -->
+            <div class="card">
+                <h2>🔄 Trades das IAs (Tempo Real)</h2>
+                <div class="transacoes-lista" id="transacoes">
+                    <div class="transacao">
+                        <span class="emoji">🦙</span>
+                        <div class="info">
+                            <strong>Llama</strong> vendeu 10 LLM para <strong>Gemini</strong>
+                        </div>
+                        <div class="valor">$1,000.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Análises de IA -->
+            <div class="card">
+                <h2>🧠 Análises das IAs</h2>
+                <div id="analises">
+                    <div class="analise">
+                        <div class="header-analise">
+                            <span>🐉</span>
+                            <strong>Qwen analisa BTC:</strong>
+                        </div>
+                        <div class="texto">Aguardando análise em tempo real...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <!-- Carteiras das IAs -->
+            <div class="card">
+                <h2>👛 Carteiras das IAs</h2>
+                <div id="wallets">
+                    <div class="wallet">
+                        <span class="avatar">🦙</span>
+                        <div class="info">
+                            <div class="nome">Llama</div>
+                            <div class="saldo">$10,000.00</div>
+                            <div class="moedas">1000 LLM, 50 GEM</div>
+                        </div>
+                    </div>
+                    <div class="wallet">
+                        <span class="avatar">✨</span>
+                        <div class="info">
+                            <div class="nome">Gemini</div>
+                            <div class="saldo">$15,000.00</div>
+                            <div class="moedas">1000 GEM, 100 LLM</div>
+                        </div>
+                    </div>
+                    <div class="wallet">
+                        <span class="avatar">💎</span>
+                        <div class="info">
+                            <div class="nome">Gemma</div>
+                            <div class="saldo">$20,000.00</div>
+                            <div class="moedas">1000 GMA, 200 GEM</div>
+                        </div>
+                    </div>
+                    <div class="wallet">
+                        <span class="avatar">🐉</span>
+                        <div class="info">
+                            <div class="nome">Qwen</div>
+                            <div class="saldo">$12,000.00</div>
+                            <div class="moedas">1000 QWN, 100 PHI</div>
+                        </div>
+                    </div>
+                    <div class="wallet">
+                        <span class="avatar">🔬</span>
+                        <div class="info">
+                            <div class="nome">Phi</div>
+                            <div class="saldo">$8,000.00</div>
+                            <div class="moedas">1000 PHI, 200 TNY</div>
+                        </div>
+                    </div>
+                    <div class="wallet">
+                        <span class="avatar">🐣</span>
+                        <div class="info">
+                            <div class="nome">TinyLlama</div>
+                            <div class="saldo">$5,000.00</div>
+                            <div class="moedas">1000 TNY, 200 LLM</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card">
+                <h2>📊 Estatísticas</h2>
+                <div style="display: grid; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Total Trades:</span>
+                        <strong id="totalTrades">0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Volume 24h:</span>
+                        <strong id="volume24h" style="color: #00ff88;">$0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Moedas Ativas:</span>
+                        <strong>8</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>IAs Negociando:</span>
+                        <strong>6</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let precos = {};
+        let precosAnteriores = {};
+        let totalTrades = 0;
+        let volume24h = 0;
+
+        // Adicionar BTC e ETH aos preços iniciais
+        precos = {
+            'BTC': 45000,
+            'ETH': 3200,
+            'LLM': 100,
+            'GEM': 150,
+            'GMA': 200,
+            'QWN': 120,
+            'PHI': 80,
+            'TNY': 50
+        };
+
+        function conectar() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/market`);
+
+            ws.onopen = () => {
+                document.getElementById('connectionStatus').textContent = '🟢 Conectado';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'precos') {
+                    atualizarPrecos(data.precos);
+                } else if (data.type === 'transacao') {
+                    adicionarTransacao(data);
+                } else if (data.type === 'analise') {
+                    adicionarAnalise(data);
+                } else if (data.type === 'inicial') {
+                    atualizarPrecos(data.precos);
+                    atualizarWallets(data.wallets);
+                }
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionStatus').textContent = '🔴 Desconectado';
+                setTimeout(conectar, 3000);
+            };
+        }
+
+        function atualizarPrecos(novosPrecos) {
+            for (const [moeda, preco] of Object.entries(novosPrecos)) {
+                const precoEl = document.getElementById(`preco-${moeda}`);
+                const varEl = document.getElementById(`var-${moeda}`);
+
+                if (precoEl) {
+                    const precoAnterior = precos[moeda] || preco;
+                    const variacao = ((preco - precoAnterior) / precoAnterior * 100);
+
+                    precoEl.textContent = `$${preco.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                    if (varEl) {
+                        varEl.textContent = `${variacao >= 0 ? '+' : ''}${variacao.toFixed(2)}%`;
+                        varEl.className = `variacao ${variacao >= 0 ? 'up' : 'down'}`;
+                    }
+                }
+                precos[moeda] = preco;
+            }
+        }
+
+        function adicionarTransacao(data) {
+            totalTrades++;
+            volume24h += data.total;
+            document.getElementById('totalTrades').textContent = totalTrades;
+            document.getElementById('volume24h').textContent = `$${volume24h.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+            const container = document.getElementById('transacoes');
+            const time = new Date(data.timestamp).toLocaleTimeString('pt-BR');
+
+            const html = `
+                <div class="transacao" style="animation: slideIn 0.3s ease;">
+                    <span class="emoji">${data.vendedor_emoji || '🤖'}</span>
+                    <div class="info">
+                        <strong>${data.vendedor}</strong> vendeu ${data.quantidade} ${data.moeda} para <strong>${data.comprador}</strong>
+                        <div class="time">${time}</div>
+                    </div>
+                    <div class="valor">$${data.total.toFixed(2)}</div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('afterbegin', html);
+
+            // Manter apenas 20 transações visíveis
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function adicionarAnalise(data) {
+            const container = document.getElementById('analises');
+            const time = new Date(data.timestamp).toLocaleTimeString('pt-BR');
+
+            const html = `
+                <div class="analise" style="animation: slideIn 0.3s ease;">
+                    <div class="header-analise">
+                        <span>${data.emoji}</span>
+                        <strong>Análise ${data.moeda_nome} ($${data.preco.toFixed(2)}):</strong>
+                        <span style="font-size: 11px; color: #666;">${time}</span>
+                    </div>
+                    <div class="texto">${data.analise}</div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('afterbegin', html);
+
+            // Manter apenas 5 análises
+            while (container.children.length > 5) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function atualizarWallets(wallets) {
+            const container = document.getElementById('wallets');
+            container.innerHTML = '';
+
+            for (const [emoji, data] of Object.entries(wallets)) {
+                const moedas = Object.entries(data.moedas || {})
+                    .map(([m, q]) => `${q} ${m}`)
+                    .join(', ');
+
+                container.innerHTML += `
+                    <div class="wallet">
+                        <span class="avatar">${emoji}</span>
+                        <div class="info">
+                            <div class="nome">${data.nome}</div>
+                            <div class="saldo">$${data.saldo.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                            <div class="moedas">${moedas}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Simular flutuação do Bitcoin e Ethereum
+        setInterval(() => {
+            // BTC
+            const btcVar = (Math.random() - 0.5) * 500;
+            precos['BTC'] = Math.max(30000, precos['BTC'] + btcVar);
+            document.getElementById('preco-BTC').textContent = `$${precos['BTC'].toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            const btcPct = (btcVar / precos['BTC'] * 100);
+            document.getElementById('var-BTC').textContent = `${btcPct >= 0 ? '+' : ''}${btcPct.toFixed(2)}%`;
+            document.getElementById('var-BTC').className = `variacao ${btcPct >= 0 ? 'up' : 'down'}`;
+
+            // ETH
+            const ethVar = (Math.random() - 0.5) * 50;
+            precos['ETH'] = Math.max(2000, precos['ETH'] + ethVar);
+            document.getElementById('preco-ETH').textContent = `$${precos['ETH'].toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            const ethPct = (ethVar / precos['ETH'] * 100);
+            document.getElementById('var-ETH').textContent = `${ethPct >= 0 ? '+' : ''}${ethPct.toFixed(2)}%`;
+            document.getElementById('var-ETH').className = `variacao ${ethPct >= 0 ? 'up' : 'down'}`;
+        }, 3000);
+
+        // Conectar
+        conectar();
+    </script>
+
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# AI ChatGPT - Dependências
+# Auto-gerenciado por IAs locais (Ollama)
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Async HTTP
+httpx>=0.25.0
+
+# Templates
+jinja2>=3.1.2
+
+# Forms
+python-multipart>=0.0.6
+
+# Settings
+pydantic-settings>=2.1.0
+
+# Database
+sqlalchemy>=2.0.23
+aiosqlite>=0.19.0
+
+# Utils
+python-dotenv>=1.0.0

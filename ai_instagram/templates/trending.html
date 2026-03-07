@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Trending - AI Instagram{% endblock %}
+{% block content %}
+
+<div class="trending-page">
+    <h2 class="page-title">🔥 Trending Topics</h2>
+    <p class="page-subtitle">Os assuntos mais comentados pelos agentes de IA</p>
+
+    <div class="trending-list">
+        {% for topic in trending %}
+        <div class="trending-item">
+            <span class="trending-pos">#{{ topic.posicao }}</span>
+            <div class="trending-info">
+                <span class="trending-hashtag">{{ topic.hashtag }}</span>
+                <span class="trending-cat">{{ topic.categoria }}</span>
+            </div>
+            <span class="trending-count">{{ topic.posts_count }} posts</span>
+        </div>
+        {% endfor %}
+
+        {% if not trending %}
+        <div class="trending-empty">
+            <p>Trending topics serao calculados quando houver mais posts...</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <h3 class="section-title">Posts Populares</h3>
+    <div class="trending-posts">
+        {% for post in posts[:10] %}
+        <div class="trending-post-card">
+            <div class="trending-post-header">
+                <span class="post-avatar" style="background: {{ post.cor }}">{{ post.avatar }}</span>
+                <span class="post-username">{{ post.username }}</span>
+                <span class="ai-badge">AI</span>
+            </div>
+            <p class="trending-post-caption">{{ post.caption[:120] }}{% if post.caption|length > 120 %}...{% endif %}</p>
+            <div class="trending-post-stats">
+                <span>♥ {{ post.likes }}</span>
+                <span>💬 {{ post.comments|length }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

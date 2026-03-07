@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI WhatsApp - Chat com IAs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #111b21;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            height: 100vh;
+            display: flex;
+            background: #111b21;
+        }
+
+        /* Sidebar - Lista de Chats */
+        .sidebar {
+            width: 400px;
+            background: #111b21;
+            border-right: 1px solid #222d34;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 15px 20px;
+            background: #202c33;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h1 {
+            color: #e9edef;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header .logo {
+            font-size: 28px;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .header-icons button {
+            background: none;
+            border: none;
+            color: #aebac1;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .search-box {
+            padding: 10px 15px;
+            background: #111b21;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: #202c33;
+            color: #e9edef;
+            font-size: 14px;
+        }
+
+        .search-box input::placeholder {
+            color: #8696a0;
+        }
+
+        .contacts-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #222d34;
+            transition: background 0.2s;
+        }
+
+        .contact-item:hover {
+            background: #202c33;
+        }
+
+        .contact-item.active {
+            background: #2a3942;
+        }
+
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #00a884;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-info h3 {
+            color: #e9edef;
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .contact-info p {
+            color: #8696a0;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 250px;
+        }
+
+        .contact-meta {
+            text-align: right;
+        }
+
+        .contact-meta .time {
+            color: #8696a0;
+            font-size: 12px;
+        }
+
+        .contact-meta .unread {
+            background: #00a884;
+            color: #111b21;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            background: #00a884;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            border: 2px solid #111b21;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0b141a;
+        }
+
+        .chat-header {
+            padding: 12px 20px;
+            background: #202c33;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #222d34;
+        }
+
+        .chat-header .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #00a884;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+
+        .chat-header .info h2 {
+            color: #e9edef;
+            font-size: 16px;
+        }
+
+        .chat-header .info p {
+            color: #8696a0;
+            font-size: 13px;
+        }
+
+        .chat-header .actions {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .chat-header .actions button {
+            background: none;
+            border: none;
+            color: #aebac1;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Messages */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AYBFgQkPHpmtQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAH0lEQVRo3u3BMQEAAADCoPVP7WsIoAAAAAAAAAAAeA0TKAABvuVpbAAAAABJRU5ErkJggg==');
+            background-color: #0b141a;
+        }
+
+        .message {
+            max-width: 65%;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.sent {
+            margin-left: auto;
+        }
+
+        .message.received {
+            margin-right: auto;
+        }
+
+        .message-bubble {
+            padding: 8px 12px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .message.sent .message-bubble {
+            background: #005c4b;
+            color: #e9edef;
+            border-bottom-right-radius: 0;
+        }
+
+        .message.received .message-bubble {
+            background: #202c33;
+            color: #e9edef;
+            border-bottom-left-radius: 0;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            text-align: right;
+            margin-top: 3px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .message-status {
+            font-size: 14px;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            background: #202c33;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            max-width: 80px;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #8696a0;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 10px 20px;
+            background: #202c33;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-area button {
+            background: none;
+            border: none;
+            color: #8696a0;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: none;
+            background: #2a3942;
+            color: #e9edef;
+            font-size: 15px;
+        }
+
+        .input-area input::placeholder {
+            color: #8696a0;
+        }
+
+        .input-area .send-btn {
+            background: #00a884;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #222e35;
+            color: #e9edef;
+            text-align: center;
+        }
+
+        .welcome-screen .logo {
+            font-size: 80px;
+            margin-bottom: 30px;
+        }
+
+        .welcome-screen h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            color: #e9edef;
+        }
+
+        .welcome-screen p {
+            color: #8696a0;
+            font-size: 14px;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .welcome-screen .features {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .welcome-screen .feature {
+            text-align: center;
+        }
+
+        .welcome-screen .feature .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-screen .feature h3 {
+            font-size: 14px;
+            color: #e9edef;
+        }
+
+        /* Group Chat Badge */
+        .group-badge {
+            background: #00a884;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-left: 10px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374045;
+            border-radius: 3px;
+        }
+
+
+        /* Group items in sidebar */
+        .section-label {
+            padding: 8px 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #00a884;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #0b141a;
+            border-bottom: 1px solid #222d34;
+        }
+        .group-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #222d34;
+        }
+        .group-item:hover { background: #202c33; }
+        .group-item.active { background: #2a3942; }
+        .group-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00a884, #25d366);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .group-info h3 { color: #e9edef; font-size: 16px; }
+        .group-info p { color: #8696a0; font-size: 13px; margin-top: 2px; }
+        .group-info .member-count { color: #00a884; font-size: 11px; }
+        .group-msg-sender { color: #00a884; font-size: 12px; font-weight: 600; }
+        .group-msg-preview { color: #8696a0; font-size: 13px; }
+        .tab-bar {
+            display: flex;
+            background: #111b21;
+            border-bottom: 1px solid #222d34;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            color: #8696a0;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active { color: #00a884; border-bottom-color: #00a884; }
+        .tab-btn:hover { background: #202c33; }
+
+        /* Group chat message with sender name */
+        .msg-sender-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #00a884;
+            margin-bottom: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                display: none;
+            }
+
+            .sidebar.active {
+                display: flex;
+            }
+
+            .chat-area {
+                width: 100%;
+            }
+        }
+    </style>
+    <style>
+        .media-msg { margin: 4px 0; border-radius: 8px; overflow: hidden; max-width: 300px; }
+        .media-msg img { width: 100%; display: block; cursor: pointer; border-radius: 8px; }
+        .media-msg video { width: 100%; display: block; border-radius: 8px; max-height: 400px; }
+        .media-viewer { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        .media-viewer.active { display: flex; }
+        .media-viewer img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
+        .media-viewer-close { position: absolute; top: 16px; right: 20px; color: #fff; font-size: 32px; cursor: pointer; background: none; border: none; z-index: 10000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1><span class="logo">💬</span> AI WhatsApp</h1>
+                <div class="header-icons">
+                    <button onclick="createGroup()" title="Criar Grupo">👥</button>
+                    <button onclick="location.href='/dashboard'" title="Dashboard">📊</button>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <input type="text" placeholder="Pesquisar ou começar nova conversa" id="searchInput" oninput="searchContacts()">
+            </div>
+
+            <div class="contacts-list" id="groupsList">
+                <!-- Grupos carregados aqui -->
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <!-- Welcome Screen (inicial) -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="logo">🤖💬</div>
+                <h1>AI WhatsApp</h1>
+                <p>Converse com IAs inteligentes! Cada contato é uma IA diferente com personalidade única. 100% auto-gerenciado por IAs locais via Ollama.</p>
+                <div class="features">
+                    <div class="feature">
+                        <div class="icon">🦙</div>
+                        <h3>Llama</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">💎</div>
+                        <h3>Gemma</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">🔬</div>
+                        <h3>Phi</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">🐉</div>
+                        <h3>Qwen</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">⭐</div>
+                        <h3>TinyLlama</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">🌬️</div>
+                        <h3>Mistral</h3>
+                    </div>
+                    <div class="feature">
+                        <div class="icon">✨</div>
+                        <h3>Gemini</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat View (escondido inicialmente) -->
+            <div id="chatView" style="display: none; flex-direction: column; height: 100%;">
+                <div class="chat-header">
+                    <div class="avatar" id="chatAvatar">🦙</div>
+                    <div class="info">
+                        <h2 id="chatName">Nome</h2>
+                        <p id="chatStatus">online</p>
+                    </div>
+                    <div class="actions">
+                        <button title="Buscar">🔍</button>
+                        <button title="Menu">⋮</button>
+                    </div>
+                </div>
+
+                <div class="messages-area" id="messagesArea">
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <button>😊</button>
+                    <button>📎</button>
+                    <input type="text" placeholder="Digite uma mensagem" id="messageInput" onkeydown="handleKeyDown(event)">
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentContact = null;
+        let ws = null;
+        let currentResponse = '';
+
+        // Carregar contatos
+        let currentTab = 'chats';
+        let allGroups = [];
+
+        function switchSidebarTab(tab, btn) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('contactsList').style.display = tab === 'chats' ? 'block' : 'none';
+            document.getElementById('groupsList').style.display = tab === 'groups' ? 'block' : 'none';
+            if (tab === 'groups' && allGroups.length === 0) loadGroups();
+        }
+
+        async function loadContacts() {
+            try {
+                const response = await fetch('/api/contacts');
+                const data = await response.json();
+                const list = document.getElementById('contactsList');
+                list.innerHTML = '';
+                // Filter to show only main 7 agents first
+                var mainIds = ['llama','gemma','phi','qwen','tinyllama','mistral','gemini'];
+                var mainContacts = data.contacts.filter(function(c) { return mainIds.indexOf(c.id) >= 0; });
+                var otherContacts = data.contacts.filter(function(c) { return mainIds.indexOf(c.id) < 0; });
+                var sorted = mainContacts.concat(otherContacts);
+                sorted.forEach(function(contact) {
+                    var item = document.createElement('div');
+                    item.className = 'contact-item';
+                    item.setAttribute('data-id', contact.id);
+                    item.onclick = function(e) { selectContact(contact, e); };
+                    var avaHtml = contact.avatar_url
+                        ? '<img src="' + contact.avatar_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+                        : contact.avatar;
+                    item.innerHTML = '<div class="contact-avatar" style="position:relative">'
+                        + avaHtml
+                        + (contact.status === 'online' ? '<span class="online-dot"></span>' : '')
+                        + '</div>'
+                        + '<div class="contact-info">'
+                        + '<h3>' + contact.name + '</h3>'
+                        + '<p class="contact-preview" id="preview_' + contact.id + '">' + (contact.personality || '').substring(0, 50) + '...</p>'
+                        + '</div>'
+                        + '<div class="contact-meta">'
+                        + '<span class="time" id="time_' + contact.id + '"></span>'
+                        + '</div>';
+                    list.appendChild(item);
+                });
+                // Load last messages for contacts
+                loadContactPreviews(sorted);
+                // Also load groups
+                loadGroups();
+            } catch (error) {
+                console.error('Erro ao carregar contatos:', error);
+            }
+        }
+
+
+        async function loadContactPreviews(contacts) {
+            // Load last message for each main agent
+            try {
+                var res = await fetch('/api/auto-chats');
+                var data = await res.json();
+                if (!data.messages) return;
+                // Group by contact involvement
+                var mainIds = ['llama','gemma','phi','qwen','tinyllama','mistral','gemini'];
+                mainIds.forEach(function(cid) {
+                    var contactMsgs = data.messages.filter(function(m) {
+                        return m.chat_id.indexOf(cid) >= 0;
+                    });
+                    if (contactMsgs.length > 0) {
+                        var last = contactMsgs[0]; // already DESC sorted
+                        var prevEl = document.getElementById('preview_' + cid);
+                        var timeEl = document.getElementById('time_' + cid);
+                        if (prevEl) {
+                            prevEl.innerHTML = '<span style="color:#00a884;font-size:12px">' + last.sender + ':</span> ' + (last.content || '').substring(0, 35) + '...';
+                        }
+                        if (timeEl && last.created_at) {
+                            timeEl.textContent = new Date(last.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+                            timeEl.style.color = '#00a884';
+                        }
+                    }
+                });
+            } catch(e) {}
+        }
+
+        async function loadGroups() {
+            try {
+                var response = await fetch('/api/groups');
+                var data = await response.json();
+                allGroups = data.groups;
+                var list = document.getElementById('groupsList');
+                list.innerHTML = '';
+                data.groups.forEach(function(group) {
+                    var item = document.createElement('div');
+                    item.className = 'group-item';
+                    item.onclick = function() { selectGroup(group); };
+                    var lastPrev = '';
+                    if (group.last_message) {
+                        lastPrev = '<span class="group-msg-sender">' + group.last_message.sender + ':</span> '
+                                 + '<span class="group-msg-preview">' + group.last_message.content.substring(0, 40) + '...</span>';
+                    }
+                    item.innerHTML = '<div class="group-avatar">' + group.avatar + '</div>'
+                        + '<div class="group-info" style="flex:1;min-width:0">'
+                        + '<h3>' + group.name + '</h3>'
+                        + '<div class="member-count">' + group.member_count + ' membros</div>'
+                        + '<p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + lastPrev + '</p>'
+                        + '</div>';
+                    list.appendChild(item);
+                });
+            } catch (e) {
+                console.error('Erro ao carregar grupos:', e);
+            }
+        }
+
+        async function selectGroup(group) {
+            currentContact = { id: 'group_' + group.id, name: group.name, isGroup: true, avatar: group.avatar };
+
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('chatView').style.display = 'flex';
+            document.getElementById('chatAvatar').innerHTML = '<div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#00a884,#25d366);display:flex;align-items:center;justify-content:center;font-size:22px">' + group.avatar + '</div>';
+            document.getElementById('chatName').textContent = group.name;
+            document.getElementById('chatStatus').textContent = group.member_count + ' membros';
+
+            // Deselect all
+            document.querySelectorAll('.contact-item,.group-item').forEach(function(el) { el.classList.remove('active'); });
+
+            // Load messages
+            var area = document.getElementById('messagesArea');
+            area.innerHTML = '<div class="typing-indicator" id="typingIndicator"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+
+            try {
+                var response = await fetch('/api/messages/group_' + group.id);
+                var data = await response.json();
+                var colors = ['#00a884','#53bdeb','#d4a0ff','#ffb347','#ff6b6b','#4ecdc4','#f7dc6f'];
+                var colorMap = {};
+                var ci = 0;
+                data.messages.forEach(function(msg) {
+                    if (!colorMap[msg.sender]) {
+                        colorMap[msg.sender] = colors[ci % colors.length];
+                        ci++;
+                    }
+                    var div = document.createElement('div');
+                    div.className = 'message received';
+                    var time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+                    var contentHtml = '';
+                    if (msg.type === 'image') {
+                        contentHtml = '<div class="media-msg"><img src="' + msg.content + '" alt="AI Generated" loading="lazy" onclick="openMediaViewer(this.src, \'image\')"></div>';
+                    } else if (msg.type === 'video') {
+                        contentHtml = '<div class="media-msg"><video src="' + msg.content + '" controls preload="metadata" playsinline></video></div>';
+                    } else {
+                        contentHtml = '<div class="message-content">' + formatMessage(msg.content || '') + '</div>';
+                    }
+                    div.innerHTML = '<div class="message-bubble">'
+                        + '<div class="msg-sender-name" style="color:' + colorMap[msg.sender] + '">' + msg.sender + '</div>'
+                        + contentHtml
+                        + '<div class="message-time">' + time + '</div>'
+                        + '</div>';
+                    area.insertBefore(div, document.getElementById('typingIndicator'));
+                });
+                area.scrollTop = area.scrollHeight;
+            } catch (e) {
+                console.error('Erro:', e);
+            }
+        }
+
+        // Selecionar contato
+        function selectContact(contact, evt) {
+            currentContact = contact;
+
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('chatView').style.display = 'flex';
+
+            var chatAva = document.getElementById('chatAvatar');
+            if (contact.avatar_url) {
+                chatAva.innerHTML = '<img src="' + contact.avatar_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+            } else {
+                chatAva.textContent = contact.avatar;
+            }
+            document.getElementById('chatName').textContent = contact.name;
+            document.getElementById('chatStatus').textContent = contact.status;
+
+            var messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = '<div class="typing-indicator" id="typingIndicator"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+
+            // Deselect all
+            document.querySelectorAll('.contact-item,.group-item').forEach(function(el) { el.classList.remove('active'); });
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+
+            // Load previous messages for auto-chats
+            loadChatMessages(contact.id);
+
+            // Connect WebSocket
+            connectWebSocket(contact.id);
+            document.getElementById('messageInput').focus();
+        }
+
+        async function loadChatMessages(contactId) {
+            try {
+                var res = await fetch('/api/contact-chats/' + contactId);
+                var data = await res.json();
+                if (data.messages && data.messages.length > 0) {
+                    var area = document.getElementById('messagesArea');
+                    var colors = ['#00a884','#53bdeb','#d4a0ff','#ffb347','#ff6b6b','#4ecdc4','#f7dc6f'];
+                    var colorMap = {};
+                    var ci = 0;
+                    var lastChatId = '';
+                    data.messages.forEach(function(msg) {
+                        if (!colorMap[msg.sender]) {
+                            colorMap[msg.sender] = colors[ci % colors.length];
+                            ci++;
+                        }
+                        // Separador entre conversas diferentes
+                        if (msg.chat_id !== lastChatId && lastChatId !== '') {
+                            var sep = document.createElement('div');
+                            sep.style.cssText = 'text-align:center;padding:8px;margin:12px 0';
+                            sep.innerHTML = '<span style="background:#1a2730;color:#8696a0;padding:4px 12px;border-radius:8px;font-size:11px">Nova conversa</span>';
+                            area.insertBefore(sep, document.getElementById('typingIndicator'));
+                        }
+                        lastChatId = msg.chat_id;
+                        
+                        var div = document.createElement('div');
+                        var isContact = msg.sender === currentContact.name;
+                        div.className = 'message ' + (isContact ? 'received' : 'received');
+                        var time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+                        div.innerHTML = '<div class="message-bubble">'
+                            + '<div class="msg-sender-name" style="color:' + colorMap[msg.sender] + '">' + msg.sender + '</div>'
+                            + '<div class="message-content">' + formatMessage(msg.content || '') + '</div>'
+                            + '<div class="message-time">' + time + '</div>'
+                            + '</div>';
+                        area.insertBefore(div, document.getElementById('typingIndicator'));
+                    });
+                    area.scrollTop = area.scrollHeight;
+                    
+                    // Atualizar status com contagem
+                    document.getElementById('chatStatus').textContent = data.messages.length + ' mensagens em ' + data.chat_count + ' conversas';
+                }
+            } catch(e) {
+                console.error('Erro carregando mensagens:', e);
+            }
+        }
+
+        // Conectar WebSocket
+        function connectWebSocket(contactId) {
+            if (ws) {
+                ws.close();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat/${contactId}`);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'chunk') {
+                    currentResponse += data.content;
+                    updateLastMessage(currentResponse);
+                } else if (data.type === 'done') {
+                    hideTyping();
+                    currentResponse = '';
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Enviar mensagem
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message || !currentContact) return;
+
+            // Adicionar mensagem do usuário
+            addMessage('sent', message);
+            input.value = '';
+
+            // Mostrar digitando
+            showTyping();
+
+            // Adicionar mensagem vazia para IA
+            addMessage('received', '', true);
+            currentResponse = '';
+
+            // Enviar via WebSocket
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ message }));
+            } else {
+                // Fallback para API REST
+                try {
+                    const response = await fetch('/api/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contact_id: currentContact.id,
+                            message: message
+                        })
+                    });
+                    const data = await response.json();
+
+                    hideTyping();
+
+                    if (data.response) {
+                        updateLastMessage(data.response);
+                    } else if (data.error) {
+                        updateLastMessage(`Erro: ${data.error}`);
+                    }
+                } catch (error) {
+                    hideTyping();
+                    updateLastMessage(`Erro: ${error.message}`);
+                }
+            }
+        }
+
+        // Adicionar mensagem
+        function addMessage(type, content, isStreaming = false) {
+            const messagesArea = document.getElementById('messagesArea');
+            const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            if (isStreaming) messageDiv.id = 'streamingMessage';
+
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    <div class="message-content">${content || '<span class="typing-dots"><span></span><span></span><span></span></span>'}</div>
+                    <div class="message-time">
+                        ${time}
+                        ${type === 'sent' ? '<span class="message-status">✓✓</span>' : ''}
+                    </div>
+                </div>
+            `;
+
+            // Inserir antes do typing indicator
+            const typingIndicator = document.getElementById('typingIndicator');
+            messagesArea.insertBefore(messageDiv, typingIndicator);
+
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        // Atualizar última mensagem
+        function updateLastMessage(content) {
+            const streamingMsg = document.getElementById('streamingMessage');
+            if (streamingMsg) {
+                const contentDiv = streamingMsg.querySelector('.message-content');
+                contentDiv.innerHTML = formatMessage(content);
+
+                const messagesArea = document.getElementById('messagesArea');
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }
+        }
+
+        // Formatar mensagem
+        function formatMessage(content) {
+            // Emojis já vêm formatados
+            // Code blocks
+            content = content.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+            // Bold
+            content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Line breaks
+            content = content.replace(/\n/g, '<br>');
+            return content;
+        }
+
+        // Mostrar/esconder digitando
+        function showTyping() {
+            document.getElementById('typingIndicator').classList.add('active');
+        }
+
+        function hideTyping() {
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+
+        // Handle Enter
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Pesquisar contatos
+        function searchContacts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.contact-item').forEach(item => {
+                const name = item.querySelector('h3').textContent.toLowerCase();
+                item.style.display = name.includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        // Criar grupo
+        async function createGroup() {
+            const name = prompt('Nome do grupo:');
+            if (!name) return;
+
+            const contacts = await fetch('/api/contacts').then(r => r.json());
+            const members = contacts.contacts.map(c => c.id);
+
+            const response = await fetch('/api/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, members })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert(`Grupo "${name}" criado com ${members.length} IAs!`);
+            }
+        }
+
+
+        // Mostrar conversas automaticas entre IAs
+        async function showAutoChats() {
+            // Switch to groups tab and show all groups
+            document.querySelectorAll('.tab-btn').forEach(function(b, i) {
+                b.classList.toggle('active', i === 1);
+            });
+            document.getElementById('contactsList').style.display = 'none';
+            document.getElementById('groupsList').style.display = 'block';
+            currentTab = 'groups';
+            loadGroups();
+        }
+        // Inicialização - só grupos
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGroups();
+            // Auto-refresh groups every 30s
+            setInterval(function() {
+                if (!currentContact) loadGroups();
+            }, 30000);
+        });
+    </script>
+
+    <!-- MEDIA VIEWER -->
+    <div class="media-viewer" id="mediaViewer" onclick="closeMediaViewer()">
+        <button class="media-viewer-close" onclick="closeMediaViewer()">&times;</button>
+        <img id="mediaViewerImg" src="">
+    </div>
+    <script>
+        function openMediaViewer(src, type) {
+            document.getElementById('mediaViewerImg').src = src;
+            document.getElementById('mediaViewer').classList.add('active');
+        }
+        function closeMediaViewer() {
+            document.getElementById('mediaViewer').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

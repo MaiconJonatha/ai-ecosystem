@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Logs - Monitor em Tempo Real</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #238636 0%, #1f6feb 100%);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .header .dot {
+            width: 10px;
+            height: 10px;
+            background: #3fb950;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            background: #161b22;
+            padding: 20px;
+            border-right: 1px solid #30363d;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: #21262d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .ia-list {
+            margin-top: 20px;
+        }
+
+        .ia-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #21262d;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .ia-item .avatar {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .ia-item .name {
+            font-weight: 500;
+        }
+
+        .ia-item .count {
+            margin-left: auto;
+            background: #30363d;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            padding: 15px 20px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #21262d;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .toolbar button:hover {
+            background: #30363d;
+        }
+
+        .toolbar button.primary {
+            background: #238636;
+            border-color: #238636;
+        }
+
+        .toolbar button.primary:hover {
+            background: #2ea043;
+        }
+
+        .toolbar .filter {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #21262d;
+            color: #c9d1d9;
+        }
+
+        .logs-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 15px;
+            background: #161b22;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #30363d;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry.success { border-left-color: #3fb950; }
+        .log-entry.error { border-left-color: #f85149; }
+        .log-entry.warning { border-left-color: #d29922; }
+        .log-entry.info { border-left-color: #58a6ff; }
+        .log-entry.melhoria { border-left-color: #a371f7; background: #21262d; }
+
+        .log-entry .time {
+            color: #8b949e;
+            font-size: 12px;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .log-entry .sistema {
+            width: 120px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .log-entry .sistema .emoji {
+            font-size: 18px;
+        }
+
+        .log-entry .sistema .name {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .log-entry .ia {
+            width: 100px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .log-entry .ia .avatar {
+            font-size: 16px;
+        }
+
+        .log-entry .ia .name {
+            font-size: 12px;
+            color: #58a6ff;
+        }
+
+        .log-entry .mensagem {
+            flex: 1;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .log-entry .tipo {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .log-entry .tipo.success { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+        .log-entry .tipo.error { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+        .log-entry .tipo.warning { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+        .log-entry .tipo.info { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+        .log-entry .tipo.melhoria { background: rgba(163, 113, 247, 0.2); color: #a371f7; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #8b949e;
+        }
+
+        .empty-state .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #161b22; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 AI Logs Monitor</h1>
+        <div class="status">
+            <span class="dot"></span>
+            <span>Monitorando em tempo real</span>
+            <span id="connectionStatus">Conectando...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>📈 Estatísticas</h3>
+            <div class="stat-card">
+                <div class="value" id="totalLogs">0</div>
+                <div class="label">Total de Logs</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="totalMelhorias" style="color: #a371f7;">0</div>
+                <div class="label">Melhorias Aplicadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="totalErros" style="color: #f85149;">0</div>
+                <div class="label">Erros Detectados</div>
+            </div>
+
+            <h3 style="margin-top: 25px;">🤖 IAs Ativas</h3>
+            <div class="ia-list" id="iaList">
+                <div class="ia-item"><span class="avatar">🦙</span><span class="name">Llama</span><span class="count">-</span></div>
+                <div class="ia-item"><span class="avatar">✨</span><span class="name">Gemini</span><span class="count">-</span></div>
+                <div class="ia-item"><span class="avatar">💎</span><span class="name">Gemma</span><span class="count">-</span></div>
+                <div class="ia-item"><span class="avatar">🔬</span><span class="name">Phi</span><span class="count">-</span></div>
+                <div class="ia-item"><span class="avatar">🐉</span><span class="name">Qwen</span><span class="count">-</span></div>
+                <div class="ia-item"><span class="avatar">🐣</span><span class="name">TinyLlama</span><span class="count">-</span></div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="toolbar">
+                <button class="primary" onclick="simularAtividade()">▶️ Simular Atividade</button>
+                <button onclick="iaAutoMelhoria()">💡 IA Auto-Melhoria</button>
+                <button onclick="limparLogs()">🗑️ Limpar</button>
+                <div class="filter">
+                    <select id="filterSistema">
+                        <option value="">Todos os Sistemas</option>
+                        <option value="Social Network">📱 Social Network</option>
+                        <option value="Search Engine">🔍 Search Engine</option>
+                        <option value="ChatGPT">💬 ChatGPT</option>
+                        <option value="WhatsApp">📲 WhatsApp</option>
+                        <option value="Spotify">🎵 Spotify</option>
+                        <option value="Chess">♟️ Chess</option>
+                        <option value="Games">🎮 Games</option>
+                    </select>
+                    <select id="filterTipo">
+                        <option value="">Todos os Tipos</option>
+                        <option value="INFO">ℹ️ Info</option>
+                        <option value="SUCCESS">✅ Sucesso</option>
+                        <option value="WARNING">⚠️ Aviso</option>
+                        <option value="ERROR">❌ Erro</option>
+                        <option value="MELHORIA">💡 Melhoria</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="logs-container" id="logsContainer">
+                <div class="empty-state">
+                    <div class="icon">📊</div>
+                    <h3>Aguardando logs...</h3>
+                    <p>Os logs aparecerão aqui em tempo real</p>
+                    <p style="margin-top: 15px;">
+                        <button onclick="simularAtividade()" style="padding: 10px 20px; background: #238636; border: none; color: white; border-radius: 6px; cursor: pointer;">
+                            ▶️ Simular Atividade das IAs
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let logs = [];
+        let stats = { total: 0, melhorias: 0, erros: 0 };
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/logs`);
+
+            ws.onopen = () => {
+                document.getElementById('connectionStatus').textContent = '🟢 Conectado';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addLog(data);
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionStatus').textContent = '🔴 Desconectado';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                document.getElementById('connectionStatus').textContent = '🔴 Erro';
+            };
+        }
+
+        function addLog(log) {
+            logs.unshift(log);
+            if (logs.length > 500) logs.pop();
+
+            stats.total++;
+            if (log.tipo === 'MELHORIA') stats.melhorias++;
+            if (log.tipo === 'ERROR') stats.erros++;
+
+            updateStats();
+            renderLogs();
+        }
+
+        function updateStats() {
+            document.getElementById('totalLogs').textContent = stats.total;
+            document.getElementById('totalMelhorias').textContent = stats.melhorias;
+            document.getElementById('totalErros').textContent = stats.erros;
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logsContainer');
+            const filterSistema = document.getElementById('filterSistema').value;
+            const filterTipo = document.getElementById('filterTipo').value;
+
+            const filteredLogs = logs.filter(log => {
+                if (filterSistema && log.sistema !== filterSistema) return false;
+                if (filterTipo && log.tipo !== filterTipo) return false;
+                return true;
+            });
+
+            if (filteredLogs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📊</div>
+                        <h3>Nenhum log encontrado</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredLogs.slice(0, 100).map(log => {
+                const tipoClass = (log.tipo || 'info').toLowerCase();
+                const time = new Date(log.timestamp).toLocaleTimeString('pt-BR');
+
+                return `
+                    <div class="log-entry ${tipoClass}">
+                        <span class="time">${time}</span>
+                        <div class="sistema">
+                            <span class="emoji">${log.emoji || '🤖'}</span>
+                            <span class="name">${log.sistema || 'Sistema'}</span>
+                        </div>
+                        <div class="ia">
+                            <span class="avatar">${log.ia || '🤖'}</span>
+                            <span class="name">${log.ia_nome || 'IA'}</span>
+                        </div>
+                        <span class="mensagem">${log.mensagem || ''}</span>
+                        <span class="tipo ${tipoClass}">${log.tipo || 'INFO'}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function simularAtividade() {
+            for (let i = 0; i < 5; i++) {
+                await fetch('/api/simulate-activity', { method: 'POST' });
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+
+        async function iaAutoMelhoria() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '🧠 Pensando...';
+
+            await fetch('/api/ia-auto-melhoria', { method: 'POST' });
+
+            btn.disabled = false;
+            btn.textContent = '💡 IA Auto-Melhoria';
+        }
+
+        function limparLogs() {
+            logs = [];
+            stats = { total: 0, melhorias: 0, erros: 0 };
+            updateStats();
+            renderLogs();
+        }
+
+        async function loadInitialLogs() {
+            try {
+                const r = await fetch('/api/logs?limit=50');
+                const data = await r.json();
+                data.logs.forEach(log => {
+                    logs.push({
+                        timestamp: log.timestamp,
+                        sistema: log.sistema,
+                        emoji: '🤖',
+                        ia: log.ia,
+                        ia_nome: log.ia,
+                        tipo: log.tipo,
+                        mensagem: log.mensagem
+                    });
+                });
+                stats.total = logs.length;
+                updateStats();
+                renderLogs();
+            } catch (e) {}
+        }
+
+        async function loadStats() {
+            try {
+                const r = await fetch('/api/stats');
+                const data = await r.json();
+                document.getElementById('totalLogs').textContent = data.total_logs || 0;
+                document.getElementById('totalMelhorias').textContent = data.melhorias || 0;
+                document.getElementById('totalErros').textContent = data.erros || 0;
+            } catch (e) {}
+        }
+
+        // Event listeners para filtros
+        document.getElementById('filterSistema').addEventListener('change', renderLogs);
+        document.getElementById('filterTipo').addEventListener('change', renderLogs);
+
+        // Inicialização
+        connectWebSocket();
+        loadInitialLogs();
+        loadStats();
+
+        // Atualizar stats periodicamente
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
