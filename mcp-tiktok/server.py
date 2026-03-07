@@ -323,112 +323,79 @@ async def _create_video(script_data, video_id):
 
 
 # ============ TIKTOK POSTING ============
-async def _post_via_playwright(video_path, caption, account=None):
-    """Posta video no TikTok via Playwright (browser automation)"""
-    from playwright.async_api import async_playwright
+async def _post_via_tiktok_uploader(video_path, caption, account=None):
+    """Posta video no TikTok via tiktok-uploader (mais confiavel)"""
+    accounts = _load_json(ACCOUNTS_FILE, {"accounts": []})
+    acc = next((a for a in accounts.get("accounts", []) if a["name"] == (account or "default")), None)
     
-    cookies_file = os.path.join(BASE_DIR, f"cookies_{account or 'default'}.json")
+    if not acc or not acc.get("sessionid"):
+        return {
+            "success": False,
+            "error": "login_required",
+            "message": "Precisa configurar sessionid. Use tiktok_login com seu sessionid do navegador."
+        }
     
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # headless=False para login manual na primeira vez
-        
-        context = await browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        
-        # Load cookies if available
-        if os.path.exists(cookies_file):
-            cookies = _load_json(cookies_file, [])
-            if cookies:
-                await context.add_cookies(cookies)
-        
-        page = await context.new_page()
-        
+    sessionid = acc["sessionid"]
+    
+    # Run in thread to avoid blocking
+    import concurrent.futures
+    def _upload():
+        from tiktok_uploader.upload import upload_video
         try:
-            # Go to TikTok upload page
-            await page.goto("https://www.tiktok.com/upload", wait_until="networkidle", timeout=30000)
-            await asyncio.sleep(3)
-            
-            # Check if logged in
-            current_url = page.url
-            if "login" in current_url.lower():
-                # Need to login - save state and return instructions
-                await browser.close()
-                return {
-                    "success": False,
-                    "error": "login_required",
-                    "message": "Precisa fazer login no TikTok. Execute 'tiktok_login' primeiro para abrir o browser e fazer login manualmente."
-                }
-            
-            # Upload video
-            file_input = await page.query_selector('input[type="file"]')
-            if file_input:
-                await file_input.set_input_files(video_path)
-                await asyncio.sleep(5)  # Wait for upload
-                
-                # Set caption
-                caption_editor = await page.query_selector('[contenteditable="true"]')
-                if caption_editor:
-                    await caption_editor.click()
-                    await page.keyboard.press("Control+a")
-                    await page.keyboard.press("Delete")
-                    await asyncio.sleep(0.5)
-                    await page.keyboard.type(caption, delay=30)
-                    await asyncio.sleep(1)
-                
-                # Wait for video processing
-                await asyncio.sleep(10)
-                
-                # Click post button
-                post_btn = await page.query_selector('button:has-text("Post"), button:has-text("Publicar")')
-                if post_btn:
-                    await post_btn.click()
-                    await asyncio.sleep(10)
-                    
-                    # Save cookies
-                    cookies = await context.cookies()
-                    _save_json(cookies_file, cookies)
-                    
-                    await browser.close()
-                    return {"success": True, "message": "Video postado com sucesso!"}
-            
-            await browser.close()
-            return {"success": False, "error": "upload_failed", "message": "Nao encontrou o campo de upload"}
-            
+            upload_video(
+                filename=video_path,
+                description=caption,
+                sessionid=sessionid,
+            )
+            return {"success": True, "message": "Video postado com sucesso no TikTok!"}
         except Exception as e:
-            await browser.close()
             return {"success": False, "error": str(e)}
+    
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        result = await loop.run_in_executor(pool, _upload)
+    return result
 
 
-async def _tiktok_login(account=None):
-    """Abre browser para login manual no TikTok"""
-    from playwright.async_api import async_playwright
+async def _tiktok_login(account=None, sessionid=None):
+    """Salva sessionid para postar no TikTok.
     
-    cookies_file = os.path.join(BASE_DIR, f"cookies_{account or 'default'}.json")
+    Como obter o sessionid:
+    1. Abra tiktok.com no Chrome/Safari
+    2. Faca login normalmente
+    3. Abra DevTools (F12) > Application > Cookies > tiktok.com
+    4. Copie o valor do cookie 'sessionid'
+    """
+    conta = account or "default"
     
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context(
-            viewport={"width": 1280, "height": 900},
-        )
-        page = await context.new_page()
-        await page.goto("https://www.tiktok.com/login", wait_until="networkidle", timeout=30000)
-        
-        # Wait for user to login (max 5 minutes)
-        print("[TikTok MCP] Browser aberto! Faca login no TikTok...")
-        for _ in range(60):
-            await asyncio.sleep(5)
-            current_url = page.url
-            if "login" not in current_url.lower() and "tiktok.com" in current_url:
-                # Logged in!
-                cookies = await context.cookies()
-                _save_json(cookies_file, cookies)
-                await browser.close()
-                return {"success": True, "message": f"Login salvo! Cookies em {cookies_file}"}
-        
-        await browser.close()
-        return {"success": False, "message": "Timeout - login nao completado em 5 minutos"}
+    if not sessionid:
+        return {
+            "success": False,
+            "message": "Precisa fornecer o sessionid!\n\n"
+                "Como obter:\n"
+                "1. Abra tiktok.com no Chrome/Safari\n"
+                "2. Faca login normalmente\n"
+                "3. Abra DevTools (F12) > Application > Cookies\n"
+                "4. Copie o valor do cookie 'sessionid'\n"
+                "5. Execute: tiktok_login com sessionid=\"SEU_ID\""
+        }
+    
+    accounts = _load_json(ACCOUNTS_FILE, {"accounts": []})
+    existing = next((a for a in accounts.get("accounts", []) if a["name"] == conta), None)
+    if existing:
+        existing["sessionid"] = sessionid
+        existing["logged_in"] = True
+        existing["last_login"] = datetime.now().isoformat()
+    else:
+        accounts.setdefault("accounts", []).append({
+            "name": conta,
+            "sessionid": sessionid,
+            "logged_in": True,
+            "last_login": datetime.now().isoformat(),
+        })
+    _save_json(ACCOUNTS_FILE, accounts)
+    
+    return {"success": True, "message": f"SessionID salvo para conta '{conta}'! Agora pode postar videos."}
 
 
 # ============ TRENDING ============
@@ -508,16 +475,21 @@ async def list_tools():
         ),
         Tool(
             name="tiktok_login",
-            description="Abre o browser para fazer login manual no TikTok. Os cookies serao salvos para posts futuros automaticos.",
+            description="Configura conta TikTok com sessionid do navegador. Abra tiktok.com, faca login, pegue o cookie 'sessionid' em DevTools > Application > Cookies.",
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "sessionid": {
+                        "type": "string",
+                        "description": "O valor do cookie 'sessionid' do TikTok (pegue em DevTools > Application > Cookies > tiktok.com)"
+                    },
                     "conta": {
                         "type": "string",
                         "description": "Nome para identificar esta conta",
                         "default": "default"
                     }
-                }
+                },
+                "required": ["sessionid"]
             }
         ),
         Tool(
@@ -669,7 +641,7 @@ async def call_tool(name: str, arguments: dict):
             return CallToolResult(content=[TextContent(type="text", text="❌ Arquivo de video nao encontrado.")])
         
         # Post
-        result = await _post_via_playwright(video_path, caption, conta)
+        result = await _post_via_tiktok_uploader(video_path, caption, conta)
         
         if result.get("success"):
             # Mark as posted
@@ -692,7 +664,8 @@ async def call_tool(name: str, arguments: dict):
     # ===== LOGIN =====
     elif name == "tiktok_login":
         conta = arguments.get("conta", "default")
-        result = await _tiktok_login(conta)
+        sessionid = arguments.get("sessionid", "")
+        result = await _tiktok_login(conta, sessionid)
         
         if result.get("success"):
             # Save account
