@@ -145,7 +145,7 @@ Regras: gancho forte, max 5 cenas, texto curto, hashtags trending, caption com C
     return None
 
 
-async def _generate_image(prompt, width=576, height=1024):
+async def _generate_image(prompt, width=768, height=1344):
     """Gera imagem com Stable Horde (vertical TikTok)"""
     async with httpx.AsyncClient(timeout=120) as client:
         # Submit job
@@ -193,65 +193,61 @@ async def _generate_image(prompt, width=576, height=1024):
 
 
 async def _create_video(script_data, video_id):
-    """Cria video TikTok a partir do roteiro"""
+    """Cria video TikTok com Ken Burns effect (zoom/pan cinematico)"""
     from PIL import Image, ImageDraw, ImageFont
     import io
     
-    cenas = script_data.get("cenas", [])
+    cenas = script_data.get("cenas", [])[:5]
     frames_dir = os.path.join(VIDEOS_DIR, f"frames_{video_id}")
     os.makedirs(frames_dir, exist_ok=True)
     
-    scene_clips = []
+    KEN_BURNS_FX = ["zoom_in", "pan_right", "zoom_out", "pan_left", "zoom_in"]
+    segments = []
     
     for i, cena in enumerate(cenas):
         print(f"[TikTok MCP] Gerando cena {i+1}/{len(cenas)}: {cena.get('texto', '')[:40]}")
         
-        # Gerar imagem
-        img_data = await _generate_image(cena.get("visual", "abstract background"))
+        # Gerar imagem (maior para Ken Burns ter espaco de zoom)
+        img_data = await _generate_image(cena.get("visual", "abstract background"), width=768, height=1344)
         
         if img_data:
             img = Image.open(io.BytesIO(img_data)).convert("RGB")
         else:
-            # Fallback: imagem solida com gradiente
-            img = Image.new("RGB", (576, 1024), (20, 20, 40))
+            img = Image.new("RGB", (768, 1344), (15, 15, 45))
             draw = ImageDraw.Draw(img)
-            for y in range(1024):
-                r = int(20 + (y/1024) * 60)
-                g = int(20 + (y/1024) * 30)
-                b = int(40 + (y/1024) * 80)
-                draw.line([(0, y), (576, y)], fill=(r, g, b))
+            colors = [(138,43,226), (0,191,255), (255,20,147), (0,255,127), (255,165,0)]
+            c = colors[i % len(colors)]
+            for y in range(1344):
+                draw.line([(0,y),(768,y)], fill=(int(15+y/1344*c[0]*0.3), int(15+y/1344*c[1]*0.3), int(45+y/1344*c[2]*0.3)))
         
-        # Resize to 1080x1920 (TikTok format)
-        img = img.resize((1080, 1920), Image.LANCZOS)
+        # Resize to 1.2x of output (extra pixels for Ken Burns movement)
+        img = img.resize((1296, 2304), Image.LANCZOS)
         
         # Add text overlay
         draw = ImageDraw.Draw(img)
         texto = cena.get("texto", "")
         
         if texto:
-            # Dark overlay area
-            overlay = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+            overlay = Image.new("RGBA", (1296, 2304), (0, 0, 0, 0))
             od = ImageDraw.Draw(overlay)
-            od.rounded_rectangle([60, 750, 1020, 1170], radius=20, fill=(0, 0, 0, 160))
+            od.rounded_rectangle([78, 900, 1218, 1400], radius=24, fill=(0, 0, 0, 160))
             img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
             draw = ImageDraw.Draw(img)
             
-            # Text
             try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 52)
-                font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 32)
+                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 62)
+                font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 38)
             except:
                 font = ImageFont.load_default()
                 font_small = font
             
-            # Wrap text
             words = texto.split()
             lines = []
             current = ""
             for w in words:
                 test = current + " " + w if current else w
                 bbox = draw.textbbox((0, 0), test, font=font)
-                if bbox[2] - bbox[0] > 900:
+                if bbox[2] - bbox[0] > 1080:
                     lines.append(current)
                     current = w
                 else:
@@ -259,64 +255,72 @@ async def _create_video(script_data, video_id):
             if current:
                 lines.append(current)
             
-            y_start = 800
+            y_start = 960
             for line in lines[:4]:
                 bbox = draw.textbbox((0, 0), line, font=font)
                 tw = bbox[2] - bbox[0]
-                x = (1080 - tw) // 2
-                # Shadow
+                x = (1296 - tw) // 2
                 draw.text((x+2, y_start+2), line, fill=(0, 0, 0), font=font)
                 draw.text((x, y_start), line, fill=(255, 255, 255), font=font)
-                y_start += 65
+                y_start += 78
             
-            # Gancho no topo (primeira cena)
             if i == 0 and script_data.get("gancho"):
-                gancho = script_data["gancho"]
-                bbox = draw.textbbox((0, 0), gancho[:50], font=font_small)
+                gancho = script_data["gancho"][:50]
+                bbox = draw.textbbox((0, 0), gancho, font=font_small)
                 tw = bbox[2] - bbox[0]
-                x = (1080 - tw) // 2
-                draw.text((x+1, 201), gancho[:50], fill=(0, 0, 0), font=font_small)
-                draw.text((x, 200), gancho[:50], fill=(255, 220, 50), font=font_small)
+                x = (1296 - tw) // 2
+                draw.text((x+1, 241), gancho, fill=(0, 0, 0), font=font_small)
+                draw.text((x, 240), gancho, fill=(255, 220, 50), font=font_small)
         
-        # Save scene image
-        scene_path = os.path.join(frames_dir, f"scene_{i:03d}.jpg")
-        img.save(scene_path, quality=95)
+        scene_path = os.path.join(frames_dir, f"scene_{i:03d}.png")
+        img.save(scene_path, quality=98)
         
-        # Duration for this scene
         dur = cena.get("duracao", 5)
-        scene_clips.append({"path": scene_path, "duration": dur})
+        fps = 30
+        nf = dur * fps
+        fx = KEN_BURNS_FX[i % len(KEN_BURNS_FX)]
+        
+        # Ken Burns effect via ffmpeg zoompan
+        seg_path = os.path.join(frames_dir, f"seg_{i:03d}.mp4")
+        
+        if fx == "zoom_in":
+            zp = f"zoompan=z='min(zoom+0.0005,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={nf}:s=1080x1920:fps={fps}"
+        elif fx == "zoom_out":
+            zp = f"zoompan=z='if(eq(on,1),1.15,max(zoom-0.0005,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={nf}:s=1080x1920:fps={fps}"
+        elif fx == "pan_right":
+            zp = f"zoompan=z='1.1':x='if(eq(on,1),0,min(x+1.5,iw-iw/zoom))':y='ih/2-(ih/zoom/2)':d={nf}:s=1080x1920:fps={fps}"
+        elif fx == "pan_left":
+            zp = f"zoompan=z='1.1':x='if(eq(on,1),iw/zoom,max(x-1.5,0))':y='ih/2-(ih/zoom/2)':d={nf}:s=1080x1920:fps={fps}"
+        else:
+            zp = f"zoompan=z='1.05':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={nf}:s=1080x1920:fps={fps}"
+        
+        cmd = [FFMPEG, "-y", "-i", scene_path, "-vf", zp,
+               "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+               "-pix_fmt", "yuv420p", "-t", str(dur), seg_path]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        
+        if os.path.exists(seg_path) and os.path.getsize(seg_path) > 0:
+            segments.append(seg_path)
     
-    # Create video with ffmpeg
+    if not segments:
+        return None
+    
+    # Concat all segments into final video
     output_path = os.path.join(VIDEOS_DIR, f"{video_id}.mp4")
-    
-    # Create concat file
     concat_file = os.path.join(frames_dir, "concat.txt")
     with open(concat_file, "w") as f:
-        for clip in scene_clips:
-            f.write(f"file '{clip['path']}'\n")
-            f.write(f"duration {clip['duration']}\n")
-        # Last frame needs to be repeated
-        if scene_clips:
-            f.write(f"file '{scene_clips[-1]['path']}'\n")
+        for seg in segments:
+            f.write(f"file '{seg}'\n")
     
-    # FFmpeg: images to video
-    cmd = [
-        FFMPEG, "-y", "-f", "concat", "-safe", "0",
-        "-i", concat_file,
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-pix_fmt", "yuv420p", "-r", "30",
-        output_path
-    ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    cmd = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", concat_file,
+           "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+           "-pix_fmt", "yuv420p", output_path]
+    subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     
     if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-        # Save thumbnail
         thumb_path = os.path.join(THUMBS_DIR, f"{video_id}.jpg")
-        if scene_clips:
-            subprocess.run(["cp", scene_clips[0]["path"], thumb_path], capture_output=True)
-        
+        if segments:
+            subprocess.run(["cp", os.path.join(frames_dir, "scene_000.png"), thumb_path], capture_output=True)
         return output_path
     
     return None
