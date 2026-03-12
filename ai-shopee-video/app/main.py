@@ -18,7 +18,7 @@ import base64
 import time
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, TextClip, ColorClip
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, TextClip, ColorClip
 
 DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIDEOS_DIR = os.path.join(DIR, "static", "videos")
@@ -195,25 +195,23 @@ templates = Jinja2Templates(directory=os.path.join(DIR, "templates"))
 
 
 # ============ AI HELPERS ============
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3.2:3b"
+
 async def _ai_generate(prompt: str, system: str = "") -> str:
-    """Generate text with Groq AI"""
-    key = random.choice(GROQ_KEYS)
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-    
+    """Generate text with Ollama (local)"""
+    full_prompt = f"{system}\n\n{prompt}" if system else prompt
+
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=90) as client:
             resp = await client.post(
-                GROQ_URL,
-                headers={"Authorization": f"Bearer {key}"},
-                json={"model": GROQ_MODEL, "messages": messages, "max_tokens": 500, "temperature": 0.8}
+                OLLAMA_URL,
+                json={"model": OLLAMA_MODEL, "prompt": full_prompt, "stream": False}
             )
             if resp.status_code == 200:
-                return resp.json()["choices"][0]["message"]["content"].strip()
+                return resp.json().get("response", "").strip()
     except Exception as e:
-        print(f"[AI] Error: {e}")
+        print(f"[AI] Ollama Error: {e}")
     return ""
 
 
@@ -630,3 +628,242 @@ async def api_download(video_id: str):
     if os.path.exists(fpath):
         return FileResponse(fpath, filename=f"shopee_{video_id}.mp4", media_type="video/mp4")
     return JSONResponse({"error": "Video not found"}, 404)
+
+
+# ============ SHOPEE POSTING AUTOMATION ============
+import glob as _glob
+import subprocess
+
+_shopee_posting = False
+_shopee_post_log = []
+
+@app.get("/api/shopee/status")
+async def api_shopee_posting_status():
+    """Status da automação de postagem na Shopee"""
+    cookies_exist = os.path.exists(os.path.join(DIR, "shopee_cookies.json"))
+    posted_file = os.path.join(DIR, "shopee_posted.json")
+    posted = json.load(open(posted_file)) if os.path.exists(posted_file) else []
+    all_videos = _glob.glob(os.path.join(VIDEOS_DIR, "shopee_*.mp4"))
+    return {
+        "logado": cookies_exist,
+        "posting_active": _shopee_posting,
+        "videos_total": len(all_videos),
+        "videos_postados": len(posted),
+        "videos_disponiveis": len(all_videos) - len(posted),
+        "log": _shopee_post_log[-20:],
+    }
+
+@app.post("/api/shopee/login")
+async def api_shopee_login():
+    """Abre navegador para login no Shopee Seller Center"""
+    proc = subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_poster.py"), "--login"],
+        cwd=DIR
+    )
+    return {"status": "login_started", "msg": "Navegador aberto. Faça login manualmente."}
+
+@app.post("/api/shopee/post")
+async def api_shopee_post(request: Request):
+    """Gera video + posta na Shopee em um passo"""
+    global _shopee_posting
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+
+    # 1. Gerar vídeo
+    result = await _create_shopee_video(body.get("categoria"), body.get("produto"))
+
+    if not result.get("success"):
+        return {"error": "Falha ao gerar vídeo", "details": result}
+
+    # 2. Postar na Shopee (em background)
+    video_path = os.path.join(VIDEOS_DIR, f"shopee_{result['id']}.mp4")
+    _shopee_post_log.append(f"[{datetime.now().strftime('%H:%M:%S')}] Postando: {result['produto'][:40]}...")
+
+    proc = subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_poster.py"), "--post", video_path],
+        cwd=DIR
+    )
+
+    return {
+        "status": "posting",
+        "video": result,
+        "msg": f"Vídeo gerado! Postando na Shopee: {result['produto'][:40]}..."
+    }
+
+@app.post("/api/shopee/auto/start")
+async def api_shopee_auto_start(request: Request):
+    """Inicia loop de auto-postagem na Shopee"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    max_posts = body.get("max", 10)
+    intervalo = body.get("intervalo", 120)
+
+    proc = subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_poster.py"), "--auto",
+         "--max", str(max_posts), "--intervalo", str(intervalo)],
+        cwd=DIR
+    )
+    global _shopee_posting
+    _shopee_posting = True
+    _shopee_post_log.append(f"[{datetime.now().strftime('%H:%M:%S')}] Auto-post iniciado: {max_posts} posts, {intervalo}s intervalo")
+
+    return {"status": "started", "max": max_posts, "intervalo": intervalo}
+
+@app.post("/api/shopee/afiliado/buscar")
+async def api_afiliado_buscar(request: Request):
+    """Busca produtos para afiliados"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    nicho = body.get("nicho")
+    proc = subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_afiliado.py"), "--buscar"] +
+        (["--nicho", nicho] if nicho else []) +
+        ["--headless"],
+        cwd=DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    return {"status": "buscando", "nicho": nicho or "aleatorio"}
+
+@app.post("/api/shopee/afiliado/pipeline")
+async def api_afiliado_pipeline(request: Request):
+    """Pipeline completo: busca + links + vídeos"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    nicho = body.get("nicho")
+    max_p = body.get("max", 5)
+    proc = subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_afiliado.py"), "--pipeline",
+         "--max", str(max_p)] + (["--nicho", nicho] if nicho else []),
+        cwd=DIR
+    )
+    return {"status": "pipeline_started", "nicho": nicho, "max": max_p}
+
+@app.get("/api/shopee/afiliado/links")
+async def api_afiliado_links():
+    """Lista links de afiliado salvos"""
+    aff_file = os.path.join(DIR, "shopee_affiliate_links.json")
+    if os.path.exists(aff_file):
+        links = json.load(open(aff_file))
+        return {"total": len(links), "links": links[-20:]}
+    return {"total": 0, "links": []}
+
+@app.get("/api/shopee/videos")
+async def api_shopee_videos_available():
+    """Lista vídeos disponíveis para postar"""
+    posted_file = os.path.join(DIR, "shopee_posted.json")
+    posted = set(json.load(open(posted_file))) if os.path.exists(posted_file) else set()
+    all_videos = _glob.glob(os.path.join(VIDEOS_DIR, "shopee_*.mp4"))
+
+    videos = []
+    for v in sorted(all_videos, key=os.path.getmtime, reverse=True)[:50]:
+        videos.append({
+            "path": v,
+            "name": os.path.basename(v),
+            "size_kb": os.path.getsize(v) // 1024,
+            "posted": v in posted,
+            "date": datetime.fromtimestamp(os.path.getmtime(v)).isoformat(),
+        })
+    return {"videos": videos}
+
+# ============ SHOPEE AGENTS API ============
+import subprocess as _subprocess
+
+@app.get("/api/agents/status")
+async def api_agents_status():
+    """Status do sistema de agentes Shopee"""
+    aff_file = os.path.join(DIR, "affiliate_links.json")
+    posts_file = os.path.join(DIR, "affiliate_posts_log.json")
+    links = json.load(open(aff_file)) if os.path.exists(aff_file) else []
+    posts = json.load(open(posts_file)) if os.path.exists(posts_file) else []
+    videos = _glob.glob(os.path.join(DIR, "static", "videos", "*.mp4")) + _glob.glob(os.path.join(DIR, "videos", "*.mp4"))
+    com_link = sum(1 for l in links if l.get("url_afiliado"))
+    postados = sum(1 for l in links if l.get("postado"))
+    return {
+        "total_links": len(links), "com_afiliado": com_link,
+        "postados": postados, "posts_gerados": len(posts),
+        "videos_disponiveis": len(videos),
+    }
+
+@app.post("/api/agents/pipeline")
+async def api_agents_pipeline(request: Request):
+    """Executa pipeline: buscar + gerar links + gerar posts"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    max_p = body.get("max", 5)
+    categorias = body.get("categorias", None)
+    args = ["python3", os.path.join(DIR, "shopee_agents.py"), "--pipeline", "--max", str(max_p)]
+    if categorias:
+        args.extend(["--categorias", categorias])
+    _subprocess.Popen(args, cwd=DIR)
+    return {"status": "pipeline_started", "max": max_p, "categorias": categorias}
+
+@app.post("/api/agents/auto")
+async def api_agents_auto(request: Request):
+    """Inicia modo automático de agentes"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    intervalo = body.get("intervalo", 1800)
+    max_ciclos = body.get("max", 5)
+    _subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_agents.py"), "--auto",
+         "--intervalo", str(intervalo), "--max", str(max_ciclos)],
+        cwd=DIR
+    )
+    return {"status": "auto_started", "intervalo": intervalo, "max_ciclos": max_ciclos}
+
+@app.post("/api/agents/buscar")
+async def api_agents_buscar(request: Request):
+    """Busca produtos no Shopee"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    termo = body.get("termo", "fone bluetooth")
+    _subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_agents.py"), "--buscar", termo],
+        cwd=DIR
+    )
+    return {"status": "busca_started", "termo": termo}
+
+@app.get("/api/agents/links")
+async def api_agents_links():
+    """Lista links de afiliado com posts"""
+    aff_file = os.path.join(DIR, "affiliate_links.json")
+    posts_file = os.path.join(DIR, "affiliate_posts_log.json")
+    links = json.load(open(aff_file)) if os.path.exists(aff_file) else []
+    posts = json.load(open(posts_file)) if os.path.exists(posts_file) else []
+    return {"total": len(links), "links": links[-30:], "posts": posts[-10:]}
+
+
+# ============ PIPELINE REVIEW VIDEO ============
+import subprocess as _subprocess
+
+@app.post("/api/pipeline/single")
+async def api_pipeline_single(request: Request):
+    """Roda pipeline completo para 1 produto (review video)"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    categoria = body.get("categoria", None)
+    post = body.get("post", True)
+    args = ["python3", os.path.join(DIR, "shopee_pipeline.py"), "--single"]
+    if categoria:
+        args.extend(["--categoria", categoria])
+    if not post:
+        args = ["python3", os.path.join(DIR, "shopee_pipeline.py"), "--test-video"]
+        if categoria:
+            args.extend(["--categoria", categoria])
+    _subprocess.Popen(args, cwd=DIR)
+    return {"status": "pipeline_started", "categoria": categoria, "post": post}
+
+@app.post("/api/pipeline/auto/start")
+async def api_pipeline_auto_start(request: Request):
+    """Inicia loop automático do pipeline"""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    max_posts = body.get("max", 20)
+    intervalo = body.get("intervalo", 300)
+    _subprocess.Popen(
+        ["python3", os.path.join(DIR, "shopee_pipeline.py"), "--auto",
+         "--max", str(max_posts), "--intervalo", str(intervalo)],
+        cwd=DIR
+    )
+    return {"status": "auto_pipeline_started", "max": max_posts, "intervalo": intervalo}
+
+@app.get("/api/pipeline/status")
+async def api_pipeline_status():
+    """Status do pipeline"""
+    log_file = os.path.join(DIR, "pipeline_log.json")
+    pipeline_log = json.load(open(log_file)) if os.path.exists(log_file) else []
+    return {
+        "total": len(pipeline_log),
+        "posted": sum(1 for p in pipeline_log if p.get("posted")),
+        "recent": pipeline_log[-10:],
+    }

@@ -43,13 +43,9 @@ SCHEDULE_FILE = os.path.join(BASE_DIR, "schedule.json")
 os.makedirs(VIDEOS_DIR, exist_ok=True)
 os.makedirs(THUMBS_DIR, exist_ok=True)
 
-# Google Gemini for AI scripts
-GOOGLE_KEYS = [
-    "GEMINI_API_KEY_1",
-    "GEMINI_API_KEY_2",
-    "GEMINI_API_KEY_3",
-]
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+# Google Gemini REMOVIDO (todas as chaves revogadas)
+GOOGLE_KEYS = []
+GEMINI_URL = ""
 
 # Ollama local (fallback)
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -91,7 +87,7 @@ async def _ai_generate(prompt, max_tokens=2000, temperature=0.8):
     
     # Fallback to Ollama
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=180) as client:
             resp = await client.post(OLLAMA_URL, json={
                 "model": OLLAMA_MODEL,
                 "prompt": prompt,
@@ -147,7 +143,7 @@ Regras: gancho forte, max 5 cenas, texto curto, hashtags trending, caption com C
 
 async def _generate_image(prompt, width=768, height=1344):
     """Gera imagem com Stable Horde (vertical TikTok)"""
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         # Submit job
         resp = await client.post(f"{HORDE_URL}/generate/async", 
             headers={"apikey": HORDE_KEY},

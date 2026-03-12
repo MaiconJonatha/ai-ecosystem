@@ -60,3 +60,38 @@ Thumbs.db
 
 # Nested git repos
 ai-social-network/.git/
+
+# Logs
+*.log
+
+# Session files
+*.session
+*.pickle
+*.pdf
+
+# Video frames (generated, too large)
+mcp-tiktok/videos/
+jesus_images_viral/
+
+# Browser profiles
+mcp-tiktok/youtube_firefox_profile/
+mcp-tiktok/remotion-video/
+
+# Shopee runtime data
+ai-shopee-video/static/
+ai-shopee-video/*.json
+ai-shopee-video/*.log
+ai-shopee-video/*.sh
+
+# Telegram sessions
+ai-telegram-agent/*.session
+ai-telegram-agent-2/*.session
+telegram_*.json
+
+# Image store generated images
+ai-image-store/app/static/images/
+ai-image-store/app/static/previews/
+ai-image-store/data/
+
+# Claude config
+.claude/

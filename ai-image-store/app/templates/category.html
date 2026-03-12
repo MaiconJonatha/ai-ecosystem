@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ cat_info.name }} - AI Image Store</title>
+    <meta name="description" content="{{ cat_info.description }}. Download premium AI-generated {{ cat_info.name }}.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; }
+        .header { background: #0d0d1a; padding: 20px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 20px; }
+        .header a { color: #7b2ff7; text-decoration: none; font-size: 1.1em; }
+        .header h1 { font-size: 1.5em; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        .cat-header { margin-bottom: 30px; }
+        .cat-header p { color: #888; margin-top: 5px; }
+        .cat-header .price { color: #00d2ff; font-size: 1.3em; font-weight: bold; margin-top: 10px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .img-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; overflow: hidden; transition: all 0.3s; cursor: pointer; text-decoration: none; color: inherit; }
+        .img-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(123,47,247,0.15); }
+        .img-card img { width: 100%; height: 250px; object-fit: cover; }
+        .img-card .info { padding: 15px; }
+        .img-card .title { font-weight: 600; margin-bottom: 5px; color: #fff; }
+        .img-card .tags { color: #888; font-size: 0.8em; margin-bottom: 8px; }
+        .img-card .bottom { display: flex; justify-content: space-between; align-items: center; }
+        .img-card .price-tag { background: linear-gradient(90deg,#7b2ff7,#00d2ff); padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .empty { text-align: center; padding: 60px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">← Voltar</a>
+        <h1>{{ cat_info.name }}</h1>
+    </div>
+    <div class="container">
+        <div class="cat-header">
+            <p>{{ cat_info.description }}</p>
+            <div class="price">A partir de ${{ "%.2f"|format(cat_info.price) }} por imagem</div>
+            <p style="color:#666;margin-top:5px;">{{ images|length }} imagens disponiveis</p>
+        </div>
+        {% if images %}
+        <div class="gallery">
+            {% for img in images|reverse %}
+            <a class="img-card" href="/image/{{ img.id }}">
+                <img src="/static/images/{{ img.filename }}" alt="{{ img.title }}" loading="lazy">
+                <div class="info">
+                    <div class="title">{{ img.title }}</div>
+                    <div class="tags">{{ img.tags|join(', ') }}</div>
+                    <div class="bottom">
+                        <span class="price-tag">${{ "%.2f"|format(img.price) }}</span>
+                        <span>{{ img.downloads or 0 }} downloads</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><h3>Gerando imagens para esta categoria...</h3><p>Volte em alguns minutos!</p></div>
+        {% endif %}
+    </div>
+</body>
+</html>

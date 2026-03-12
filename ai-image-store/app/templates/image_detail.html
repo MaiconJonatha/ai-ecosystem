@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ image.title }} - AI Image Store</title>
+    <meta name="description" content="{{ image.title }}. Premium AI-generated image. Tags: {{ image.tags|join(', ') }}">
+    <meta property="og:title" content="{{ image.title }}">
+    <meta property="og:image" content="/static/images/{{ image.filename }}">
+    <meta property="og:type" content="product">
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"ImageObject","name":"{{ image.title }}","contentUrl":"/static/images/{{ image.filename }}","description":"AI Generated {{ image.category }}","offers":{"@type":"Offer","price":"{{ image.price }}","priceCurrency":"USD"}}
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; }
+        .header { background: #0d0d1a; padding: 20px; border-bottom: 1px solid #222; }
+        .header a { color: #7b2ff7; text-decoration: none; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .detail { display: grid; grid-template-columns: 1fr 400px; gap: 40px; }
+        .detail img { width: 100%; border-radius: 12px; border: 1px solid #2a2a4a; }
+        .sidebar { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 30px; height: fit-content; }
+        .sidebar h1 { font-size: 1.5em; margin-bottom: 15px; }
+        .sidebar .price { font-size: 2.5em; color: #00d2ff; font-weight: bold; margin-bottom: 20px; }
+        .sidebar .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .sidebar .tag { background: #2a2a4a; padding: 5px 12px; border-radius: 15px; font-size: 0.85em; color: #aaa; }
+        .sidebar .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a4a; color: #888; }
+        .btn-buy {
+            display: block; width: 100%; padding: 18px; border: none; border-radius: 12px;
+            background: linear-gradient(90deg, #7b2ff7, #00d2ff); color: white;
+            font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 20px;
+            transition: all 0.3s;
+        }
+        .btn-buy:hover { opacity: 0.9; transform: scale(1.02); }
+        .btn-free {
+            display: block; width: 100%; padding: 14px; border: 2px solid #333; border-radius: 12px;
+            background: transparent; color: #aaa; font-size: 1em; cursor: pointer; margin-top: 10px;
+        }
+        .btn-free:hover { border-color: #7b2ff7; color: #fff; }
+        @media (max-width: 768px) {
+            .detail { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">← AI Image Store</a> &nbsp;/&nbsp;
+        <a href="/category/{{ image.category }}">{{ categories[image.category].name if image.category in categories else image.category }}</a>
+    </div>
+    <div class="container">
+        <div class="detail">
+            <div>
+                <img src="/static/images/{{ image.filename }}" alt="{{ image.title }}">
+            </div>
+            <div class="sidebar">
+                <h1>{{ image.title }}</h1>
+                <div class="price">${{ "%.2f"|format(image.price) }}</div>
+                <div class="tags">
+                    {% for tag in image.tags %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                <div class="info-row"><span>Categoria</span><span>{{ categories[image.category].name if image.category in categories else image.category }}</span></div>
+                <div class="info-row"><span>Tamanhos</span><span>{{ image.sizes|join(', ') }}</span></div>
+                <div class="info-row"><span>Formato</span><span>PNG</span></div>
+                <div class="info-row"><span>Licenca</span><span>Comercial</span></div>
+                <div class="info-row"><span>Views</span><span>{{ image.views or 0 }}</span></div>
+                <div class="info-row"><span>Downloads</span><span>{{ image.downloads or 0 }}</span></div>
+                <button class="btn-buy" onclick="buyImage('{{ image.id }}')">Comprar & Download - ${{ "%.2f"|format(image.price) }}</button>
+                <button class="btn-free" onclick="previewImage('{{ image.id }}')">Preview Gratis (baixa resolucao)</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function buyImage(id) {
+            if (confirm('Download por $' + document.querySelector('.price').textContent.replace('$','') + '?')) {
+                window.location.href = '/download/' + id;
+            }
+        }
+        function previewImage(id) {
+            window.open('/static/images/{{ image.filename }}', '_blank');
+        }
+    </script>
+</body>
+</html>
